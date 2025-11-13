@@ -1,0 +1,12 @@
+# IDE and editor
+.metals/
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test scripts (optional - uncomment if you don't want to commit them)
+# start-backend.ps1
+# start-frontend.ps1

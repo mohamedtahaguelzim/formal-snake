@@ -7,12 +7,13 @@ class WebSocketService {
     this.listeners = {}
   }
 
-  connect(url = 'ws://localhost:8080') {
+  connect(url = 'ws://localhost:8080/ws') {
     try {
+      console.log('Connecting to WebSocket:', url)
       this.ws = new WebSocket(url)
       
       this.ws.onopen = () => {
-        console.log('WebSocket connected')
+        console.log('WebSocket connected successfully!')
         this.reconnectAttempts = 0
         this.emit('connected', true)
       }
@@ -20,12 +21,22 @@ class WebSocketService {
       this.ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data)
-          this.emit('message', data)
+          console.log('Received from server:', data)
           
-          // Emit specific event types
-          if (data.type) {
-            this.emit(data.type, data.payload)
+          // Backend sends game state directly as JSON
+          if (data.snake !== undefined) {
+            this.emit('GAME_STATE', data)
+            
+            if (data.gameStarted && !data.gameOver) {
+              this.emit('GAME_STARTED', data)
+            }
+            
+            if (data.gameOver) {
+              this.emit('GAME_OVER', data)
+            }
           }
+          
+          this.emit('message', data)
         } catch (error) {
           console.error('Error parsing WebSocket message:', error)
         }
@@ -62,10 +73,11 @@ class WebSocketService {
     }
   }
 
-  send(type, payload) {
+  send(key) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      const message = JSON.stringify({ type, payload })
+      const message = JSON.stringify({ key })
       this.ws.send(message)
+      console.log('Sent to server:', message)
     } else {
       console.warn('WebSocket is not connected')
     }
@@ -99,16 +111,18 @@ class WebSocketService {
   }
 
   // Game-specific methods
-  startGame(config) {
-    this.send('START_GAME', config)
+  startGame() {
+    // Backend starts game on spacebar press
+    this.send(' ')
   }
 
   sendInput(key) {
-    this.send('PLAYER_INPUT', { key })
+    // Send the key directly (ArrowUp, ArrowDown, etc.)
+    this.send(key)
   }
 
   restartGame() {
-    this.send('RESTART_GAME')
+    this.send('r')
   }
 }
 
