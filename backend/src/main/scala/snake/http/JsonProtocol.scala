@@ -1,5 +1,6 @@
-package snake
+package snake.http
 
+import snake.core.{GameState, Position, Direction, GameStatus, GameConfig}
 import spray.json.*
 
 object JsonProtocol extends DefaultJsonProtocol:
@@ -24,13 +25,14 @@ object JsonProtocol extends DefaultJsonProtocol:
       case JsString("gamewon") => GameStatus.GameWon
       case _ => throw DeserializationException("Expected game status string")
 
-  implicit val gameStateFormat: RootJsonFormat[GameState] = jsonFormat13(GameState.apply)
+  implicit val gameConfigFormat: RootJsonFormat[GameConfig] = jsonFormat4(GameConfig.apply)
+  implicit val gameStateFormat: RootJsonFormat[GameState] = jsonFormat8(GameState.apply)
   
   case class KeyPressMessage(key: String)
   implicit val keyPressFormat: RootJsonFormat[KeyPressMessage] = jsonFormat1(KeyPressMessage.apply)
   
-  case class GameConfigMessage(gridWidth: Int, gridHeight: Int, gameSpeed: Int)
-  implicit val gameConfigFormat: RootJsonFormat[GameConfigMessage] = jsonFormat3(GameConfigMessage.apply)
+  case class GameConfigMessage(gridWidth: Int, gridHeight: Int, gameSpeed: Int, snakeStartSize: Int = 1)
+  implicit val gameConfigMessageFormat: RootJsonFormat[GameConfigMessage] = jsonFormat4(GameConfigMessage.apply)
   
   case class GameStateResponse(
     snake: List[Position],

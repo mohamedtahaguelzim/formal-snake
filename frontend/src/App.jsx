@@ -69,6 +69,7 @@ function App() {
       gridWidth: config.gridWidth, 
       gridHeight: config.gridHeight,
       gameSpeed: config.gameSpeed,
+      snakeStartSize: config.snakeStartSize,
       showDebugNumbers: config.showDebugNumbers
     }))
     

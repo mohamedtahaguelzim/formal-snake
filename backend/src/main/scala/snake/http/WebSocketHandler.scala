@@ -1,5 +1,7 @@
-package snake
+package snake.http
 
+import snake.actors.GameStateMachine
+import snake.core.{GameState, Direction, GameStatus}
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.actor.typed.scaladsl.AskPattern.*
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
@@ -38,7 +40,7 @@ class WebSocketHandler(gameActor: ActorRef[GameStateMachine.Command])
       // Check if it's a config message
       if (json.fields.contains("gridWidth")) {
         val config = json.convertTo[GameConfigMessage]
-        gameActor ! GameStateMachine.SetGameConfig(config.gridWidth, config.gridHeight, config.gameSpeed)
+        gameActor ! GameStateMachine.SetGameConfig(config.gridWidth, config.gridHeight, config.gameSpeed, config.snakeStartSize)
         getCurrentGameState.map(TextMessage.Strict(_))
       } else {
         // Otherwise it's a key press
@@ -83,11 +85,11 @@ class WebSocketHandler(gameActor: ActorRef[GameStateMachine.Command])
         snake = state.snake,
         food = state.food,
         score = state.score,
-        gameOver = state.gameOver,
-        gameWon = state.gameWon,
+        gameOver = state.status == GameStatus.GameOver,
+        gameWon = state.status == GameStatus.GameWon,
         gridWidth = state.gridWidth,
         gridHeight = state.gridHeight,
-        gameStarted = state.gameStarted,
+        gameStarted = state.status != GameStatus.Waiting,
         stateNumber = state.stateNumber
       )
       response.toJson.toString
@@ -103,11 +105,11 @@ class WebSocketHandler(gameActor: ActorRef[GameStateMachine.Command])
               snake = state.snake,
               food = state.food,
               score = state.score,
-              gameOver = state.gameOver,
-              gameWon = state.gameWon,
+              gameOver = state.status == GameStatus.GameOver,
+              gameWon = state.status == GameStatus.GameWon,
               gridWidth = state.gridWidth,
               gridHeight = state.gridHeight,
-              gameStarted = state.gameStarted,
+              gameStarted = state.status != GameStatus.Waiting,
               stateNumber = state.stateNumber
             )
             Some(response.toJson.toString)

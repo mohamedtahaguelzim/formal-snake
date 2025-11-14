@@ -13,6 +13,10 @@ function Welcome({ onStartGame, connected }) {
     const saved = localStorage.getItem('snakeGameSpeed')
     return saved ? parseInt(saved) : 200
   })
+  const [snakeStartSize, setSnakeStartSize] = useState(() => {
+    const saved = localStorage.getItem('snakeStartSize')
+    return saved ? parseInt(saved) : 1
+  })
   const [showDebugNumbers, setShowDebugNumbers] = useState(() => {
     const saved = localStorage.getItem('snakeShowDebugNumbers')
     return saved ? saved === 'true' : false
@@ -32,6 +36,10 @@ function Welcome({ onStartGame, connected }) {
   }, [gameSpeed])
 
   useEffect(() => {
+    localStorage.setItem('snakeStartSize', snakeStartSize)
+  }, [snakeStartSize])
+
+  useEffect(() => {
     localStorage.setItem('snakeShowDebugNumbers', showDebugNumbers)
   }, [showDebugNumbers])
 
@@ -40,6 +48,7 @@ function Welcome({ onStartGame, connected }) {
       gridWidth: parseInt(gridWidth),
       gridHeight: parseInt(gridHeight),
       gameSpeed: parseInt(gameSpeed),
+      snakeStartSize: parseInt(snakeStartSize),
       showDebugNumbers: showDebugNumbers
     })
   }
@@ -88,6 +97,19 @@ function Welcome({ onStartGame, connected }) {
               className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-green-500"
             />
             <p className="text-xs text-gray-400 mt-1">0 = Turn-based, Higher = Slower (0-500ms)</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Snake Start Size</label>
+            <input
+              type="number"
+              min="1"
+              max="10"
+              value={snakeStartSize}
+              onChange={(e) => setSnakeStartSize(e.target.value)}
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <p className="text-xs text-gray-400 mt-1">Number of segments the snake starts with (1-10)</p>
           </div>
           
           <div className="flex items-center">

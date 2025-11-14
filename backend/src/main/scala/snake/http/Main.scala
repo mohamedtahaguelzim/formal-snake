@@ -1,5 +1,6 @@
-package snake
+package snake.http
 
+import snake.actors.GameStateMachine
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.Behaviors
 import akka.http.scaladsl.Http
