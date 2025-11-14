@@ -1,0 +1,45 @@
+\documentclass[letterpaper, 11pt]{article}
+\usepackage{style}
+\usepackage{tgpagella}
+% \setlength{\parindent}{0pt}
+
+\title{Formal Verification of the Snake Game as a State Machine}
+\author{
+  Clément Yves Pierre Tsedri \\
+      \texttt{\href{mailto:clement.tsedri@epfl.ch}{clement.tsedri@epfl.ch}} \and
+  Mohamed Taha Guelzim \\
+      \texttt{\href{mailto:mohamed.guelzim@epfl.ch}{mohamed.guelzim@epfl.ch}} \and
+  Ozair Faizan \\
+      \texttt{\href{mailto:ahmad.faizan@epfl.ch}{ahmad.faizan@epfl.ch}}
+}
+\date{}
+
+\begin{document}
+\maketitle
+\setlength{\belowdisplayskip}{4pt} \setlength{\belowdisplayshortskip}{4pt}
+\setlength{\abovedisplayskip}{4pt} \setlength{\abovedisplayshortskip}{4pt}
+
+\abstract{
+    The Snake game offers a simple yet non-trivial environment for studying state-based reasoning, safety properties, and termination. In this project, we intend to formalize Snake as a State Machine and verify the correctness of its controller and high-level properties using Stainless, a verification framework for Scala. The set of possible states will have one invalid state and valid states that encode the snake, the walls and the apples on the grid. \S\ref{sec:prop} gives some interesting properties we would like to prove.
+
+    As a background reference, we will review the paper \cite{games-using-fm}, which formalizes simple games such as Pac-Man and Chess in ProB.
+}
+
+
+\section{Properties we will verify}\label{sec:prop}
+We model the snake as \mintinline{scala}{List[(Position, Direction)]} where the list is ordered from
+the head of the snake to its tail.
+\begin{itemize}
+    \item The snake is continuous, that is, the $i$-th position of the snake is given by the
+        $i+1$-th position plus the $i+1$-th direction for $0 \leqslant i < \text{snake length} - 1$ 
+    \item The snake does not collide with itself or the walls, and remains inside the grid.
+    \item The transition function of the state machine outputs the invalid state from a valid state
+        only if one of the above conditions is not satisfied for the updated state.
+    \item Valid moves are defined according to \textbf{Definition 1} in \cite{155769e4c59d41deb4982a73745c5b88}.
+    \item Additional safety and liveness properties may be considered as the model evolves.
+\end{itemize}
+
+
+
+\printbibliography
+\end{document}

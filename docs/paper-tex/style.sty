@@ -1,0 +1,47 @@
+\usepackage{setspace}
+\setstretch{1.1}
+
+\usepackage[margin=2.3cm, letterpaper]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{fancyhdr}
+\usepackage{titletoc, titlesec}
+\usepackage{mathtools}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{mathrsfs}
+\usepackage{esint}
+\usepackage{tabularx}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{tikz-cd}
+\usepackage[most]{tcolorbox}
+\usepackage[backend=biber,style=numeric]{biblatex}
+\addbibresource{references.bib}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    urlcolor=black,
+    linkcolor=black,
+    pdftitle={},
+}
+\usepackage{minted}
+
+% Fixing spacing caused by left right.
+\let\originalleft\left
+\let\originalright\right
+\renewcommand{\left}{\mathopen{}\mathclose\bgroup\originalleft}
+\renewcommand{\right}{\aftergroup\egroup\originalright}
+
+\newcommand{\dd}[1]{\;\mathrm{d}#1}
+\let\originalvec\vec
+\renewcommand{\vec}[1]{\boldsymbol{#1}}
+
+\newcommand{\sto}{\longrightarrow}
+\newcommand{\mto}{\longmapsto}
+\newcommand{\jj}{\texttt{j}}
+\newcommand{\ndiv}{\hspace{-2.5pt}\not\hspace{2.6pt}\mid}
+\newcommand{\sfr}[2]{\left. \raisebox{.3ex}{$\displaystyle #1$}
+                            \middle/ \raisebox{-.3ex}{$\displaystyle #2$} \right.}
+
