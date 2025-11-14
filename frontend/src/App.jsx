@@ -2,9 +2,15 @@ import { useState, useEffect } from 'react'
 import Welcome from './components/Welcome'
 import GameBoard from './components/GameBoard'
 import websocketService from './services/websocket'
+import soundService from './services/sound'
 
 function App() {
   const [currentView, setCurrentView] = useState('welcome') // 'welcome' | 'game'
+  const [isMuted, setIsMuted] = useState(false)
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem('snakeIsDarkMode')
+    return saved ? saved === 'true' : false
+  })
   const [gameState, setGameState] = useState({
     snake: [],
     food: null,
@@ -25,15 +31,12 @@ function App() {
     })
 
     websocketService.on('GAME_STATE', (newGameState) => {
-      setGameState(prev => ({ ...prev, ...newGameState }))
-    })
-
-    websocketService.on('GAME_STARTED', (data) => {
-      setGameState(prev => ({ ...prev, gameStarted: true, ...data }))
-    })
-
-    websocketService.on('GAME_OVER', (data) => {
-      setGameState(prev => ({ ...prev, gameOver: true, ...data }))
+      setGameState(prev => ({ 
+        ...prev, 
+        ...newGameState,
+        // Keep debug mode from local config
+        showDebugNumbers: prev.showDebugNumbers
+      }))
     })
 
     websocketService.on('error', (error) => {
@@ -55,26 +58,31 @@ function App() {
     }
   }, [])
 
+  // Sync dark mode with Welcome component
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const saved = localStorage.getItem('snakeIsDarkMode')
+      setIsDarkMode(saved ? saved === 'true' : false)
+    }
+    window.addEventListener('storage', handleStorageChange)
+    handleStorageChange() // Check on mount
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
+
   const handleStartGame = async (config) => {
-    // Send config to backend first and wait
+    // Send config to backend first
     websocketService.sendConfig(config)
     
-    // Wait for config to be processed
-    await new Promise(resolve => setTimeout(resolve, 200))
-    
-    // Then update view and state
-    setCurrentView('game')
+    // Store config locally only for UI purposes (debug mode)
     setGameState(prev => ({ 
-      ...prev, 
-      gridWidth: config.gridWidth, 
-      gridHeight: config.gridHeight,
-      gameSpeed: config.gameSpeed,
-      snakeStartSize: config.snakeStartSize,
+      ...prev,
       showDebugNumbers: config.showDebugNumbers
     }))
     
-    // Finally start the game
-    await new Promise(resolve => setTimeout(resolve, 100))
+    // Switch to game view immediately
+    setCurrentView('game')
+    
+    // Send start game command - let backend handle all state
     websocketService.startGame()
   }
 
@@ -84,12 +92,8 @@ function App() {
   }
 
   const handleRestart = () => {
-    // Send restart and start commands to backend
+    // Send restart command to backend - let backend handle state
     websocketService.restartGame()
-    // Give backend time to reset, then start new game
-    setTimeout(() => {
-      websocketService.startGame()
-    }, 100)
   }
 
   const handleBackToMenu = () => {
@@ -98,10 +102,38 @@ function App() {
     setCurrentView('welcome')
   }
 
+  const toggleMute = () => {
+    setIsMuted(prev => {
+      const newMuted = !prev
+      soundService.setMuted(newMuted)
+      return newMuted
+    })
+  }
+
+  const toggleDebug = () => {
+    setGameState(prev => ({ 
+      ...prev, 
+      showDebugNumbers: !prev.showDebugNumbers 
+    }))
+  }
+
+  const toggleDarkMode = () => {
+    setIsDarkMode(prev => {
+      const newDarkMode = !prev
+      localStorage.setItem('snakeIsDarkMode', newDarkMode.toString())
+      return newDarkMode
+    })
+  }
+
   return (
     <>
       {currentView === 'welcome' && (
-        <Welcome onStartGame={handleStartGame} connected={gameState.connected} />
+        <Welcome 
+          onStartGame={handleStartGame} 
+          connected={gameState.connected}
+          isDarkMode={isDarkMode}
+          setIsDarkMode={setIsDarkMode}
+        />
       )}
       
       {currentView === 'game' && (
@@ -110,6 +142,11 @@ function App() {
           onKeyPress={handleKeyPress}
           onBackToMenu={handleBackToMenu}
           onRestart={handleRestart}
+          isMuted={isMuted}
+          onToggleMute={toggleMute}
+          onToggleDebug={toggleDebug}
+          isDarkMode={isDarkMode}
+          onToggleDarkMode={toggleDarkMode}
         />
       )}
     </>

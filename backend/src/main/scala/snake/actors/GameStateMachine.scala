@@ -94,6 +94,15 @@ object GameStateMachine:
           context.log.info("Restarting game from game over")
           waiting(GameLogic.resetGame(state.config))
           
+        case StopGame =>
+          context.log.info("Stopping game from game over")
+          waiting(GameLogic.resetGame(state.config))
+          
+        case SetGameConfig(width, height, speed, startSize) =>
+          context.log.info(s"Game configured from game over: ${width}x${height}, speed: ${speed}ms, start size: ${startSize}")
+          val newConfig = GameConfig(width, height, speed, startSize)
+          waiting(GameLogic.resetGame(newConfig))
+          
         case GetState(replyTo) =>
           replyTo ! state
           Behaviors.same

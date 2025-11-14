@@ -1,16 +1,115 @@
 @import "tailwindcss";
 
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+/* Nokia Snake Style Font */
+@import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+:root {
+  font-family: 'Courier Prime', 'Courier New', monospace;
+  line-height: 1.2;
+  font-weight: 700;
+
+  color-scheme: light;
+  color: #000000;
+  background-color: #9ACD32;
 
   font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeSpeed;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* Nokia-style pixelated aesthetics */
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  text-shadow: 2px 2px 0px rgba(0,0,0,0.3);
+}
+
+/* Remove any smooth animations for authentic retro feel */
+* {
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+}
+
+/* Improved Nokia green gradient */
+.nokia-green {
+  background: linear-gradient(135deg, #8BC34A 0%, #689F38 50%, #4CAF50 100%);
+}
+
+/* Spinning apple animation */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spinning-apple {
+  animation: spin 2s linear infinite;
+  display: inline-block;
+}
+
+/* Snake segment styling */
+.snake-segment {
+  position: relative;
+  background-color: #1B5E20;
+}
+
+.snake-segment::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  background-color: #2E7D32;
+  border-radius: 3px;
+  box-shadow: inset 1px 1px 0px rgba(76, 175, 80, 0.6);
+}
+
+/* Retro button style */
+.retro-button {
+  box-shadow: 3px 3px 0px rgba(0,0,0,0.7);
+  transition: all 0.1s ease;
+  background: linear-gradient(145deg, #1B5E20, #0D4413);
+}
+
+.retro-button:active {
+  box-shadow: 1px 1px 0px rgba(0,0,0,0.7);
+  transform: translate(2px, 2px);
+}
+
+.retro-button:hover {
+  background: linear-gradient(145deg, #2E7D32, #1B5E20);
+}
+
+/* Mute button */
+.mute-button {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  width: 50px;
+  height: 50px;
+  border-radius: 8px;
+  background: #1B5E20;
+  color: #8BC34A;
+  border: 2px solid #2E7D32;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mute-button:hover {
+  background: #2E7D32;
+}
+
+/* Game board improvements */
+.game-board {
+  background: linear-gradient(145deg, #A5D6A7, #81C784);
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
 }

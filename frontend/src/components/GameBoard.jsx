@@ -1,7 +1,58 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import soundService from '../services/sound'
 
-function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart }) {
-  const { snake = [], food = null, score = 0, gameOver = false, gameWon = false, gridWidth = 20, gridHeight = 20, gameStarted = false, showDebugNumbers = false } = gameState
+function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, onToggleMute, onToggleDebug, isDarkMode, onToggleDarkMode }) {
+  const { 
+    snake = [], 
+    food = null, 
+    score = 0, 
+    gameOver = false, 
+    gameWon = false, 
+    gridWidth = 20, 
+    gridHeight = 20, 
+    gameStarted = false, 
+    showDebugNumbers = false,
+  } = gameState
+
+  const prevGameState = useRef({})
+
+  // Initialize audio context on first user interaction
+  useEffect(() => {
+    const handleFirstInteraction = () => {
+      soundService.resumeAudioContext()
+      document.removeEventListener('click', handleFirstInteraction)
+      document.removeEventListener('keydown', handleFirstInteraction)
+    }
+    
+    document.addEventListener('click', handleFirstInteraction)
+    document.addEventListener('keydown', handleFirstInteraction)
+    
+    return () => {
+      document.removeEventListener('click', handleFirstInteraction)
+      document.removeEventListener('keydown', handleFirstInteraction)
+    }
+  }, [])
+
+  // Sound effects based on game state changes
+  useEffect(() => {
+    // Check for score increase (food eaten)
+    if (score > (prevGameState.current.score || 0)) {
+      soundService.playEatSound()
+    }
+    
+    // Check for game over
+    if (gameOver && !prevGameState.current.gameOver) {
+      soundService.playGameOverSound()
+    }
+    
+    // Check for game won
+    if (gameWon && !prevGameState.current.gameWon) {
+      soundService.playWinSound()
+    }
+    
+    // Update previous state
+    prevGameState.current = { score, gameOver, gameWon }
+  }, [score, gameOver, gameWon])
 
   // Keyboard event listener
   useEffect(() => {
@@ -9,6 +60,10 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart }) {
       // Prevent default behavior for arrow keys and space
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
         e.preventDefault()
+        // Play move sound for arrow keys
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+          soundService.playMoveSound()
+        }
         onKeyPress(e.key)
       }
       // Handle restart with R key
@@ -22,129 +77,278 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart }) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [onKeyPress, onRestart])
 
-  // Calculate adaptive cell size based on grid dimensions
+  // Calculate adaptive cell size with better scaling for small grids
   const calculateCellSize = () => {
-    const maxGridSize = 600 // Maximum container size in pixels
-    const cellSizeByWidth = Math.floor(maxGridSize / gridWidth)
-    const cellSizeByHeight = Math.floor(maxGridSize / gridHeight)
-    return Math.min(cellSizeByWidth, cellSizeByHeight, 30) // Cap at 30px max
+    const viewportWidth = window.innerWidth * 0.5 // 50% of screen width
+    const viewportHeight = window.innerHeight * 0.6 // Consider height too
+    
+    const cellSizeByWidth = Math.floor(viewportWidth / gridWidth)
+    const cellSizeByHeight = Math.floor(viewportHeight / gridHeight)
+    const calculatedSize = Math.min(cellSizeByWidth, cellSizeByHeight)
+    
+    // More aggressive scaling for small grids
+    const minCellSize = Math.max(25, Math.floor(300 / Math.max(gridWidth, gridHeight)))
+    const maxCellSize = 60
+    
+    return Math.max(minCellSize, Math.min(calculatedSize, maxCellSize))
   }
 
   const cellSize = calculateCellSize()
 
-  // Render game board
-  const renderBoard = () => {
-    const board = []
-    for (let y = 0; y < gridHeight; y++) {
-      for (let x = 0; x < gridWidth; x++) {
-        const snakeSegmentIndex = snake.findIndex(segment => segment.x === x && segment.y === y)
-        const isSnake = snakeSegmentIndex !== -1
-        const isFood = food && food.x === x && food.y === y
-        const isHead = snakeSegmentIndex === 0
 
-        // Calculate aggressive fading for snake body
-        let segmentColor = 'bg-gray-900'
-        if (isHead) {
-          segmentColor = 'bg-green-400'
-        } else if (isSnake) {
-          // Aggressive fading: fade from bright to very dark quickly
-          const fadePercent = Math.pow(snakeSegmentIndex / snake.length, 0.5) // Square root for aggressive fade
-          const brightness = Math.round(600 - fadePercent * 500) // From 600 (bright) to 100 (very dark)
-          segmentColor = `bg-green-${Math.max(100, Math.min(900, brightness))}`
-        } else if (isFood) {
-          segmentColor = 'bg-red-500'
-        }
 
-        const fontSize = Math.max(8, cellSize * 0.5) // Scale font with cell size
-
-        board.push(
-          <div
-            key={`${x}-${y}`}
-            className={`border border-gray-700 ${segmentColor} flex items-center justify-center font-bold`}
-            style={{
-              width: `${cellSize}px`,
-              height: `${cellSize}px`,
-              fontSize: `${fontSize}px`,
-              ...(isSnake && !isHead ? {
-                backgroundColor: `rgb(${22 - snakeSegmentIndex * 2}, ${163 - snakeSegmentIndex * 15}, ${74 - snakeSegmentIndex * 7})`
-              } : {})
-            }}
-          >
-            {showDebugNumbers && isSnake && (
-              <span className="text-white text-opacity-70">{snakeSegmentIndex}</span>
-            )}
-          </div>
-        )
-      }
-    }
-    return board
-  }
+  const boardWidth = cellSize * gridWidth
+  const boardHeight = cellSize * gridHeight
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white p-4">
-      <div className="flex items-center justify-between w-full max-w-2xl mb-4">
+    <div className="flex flex-col items-center justify-center min-h-screen p-4" style={{ 
+      backgroundColor: isDarkMode ? '#1a1a1a' : '#8B9556',
+      color: isDarkMode ? '#8B9556' : '#000'
+    }}>
+      <div className="flex gap-2 mb-4">
         <button
           onClick={onBackToMenu}
-          className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md transition-colors duration-200"
+          className="px-4 py-2 border-2 font-black tracking-wide hover:opacity-80"
+          style={{ 
+            backgroundColor: isDarkMode ? '#000' : '#000', 
+            color: isDarkMode ? '#8B9556' : '#8B9556',
+            borderColor: isDarkMode ? '#8B9556' : '#000'
+          }}
         >
-          ← Back to Menu
+          ← MENU
         </button>
-        <h1 className="text-4xl font-bold">Snake Game</h1>
-        <div className="text-xl">Score: {score}</div>
+        <button
+          onClick={onToggleMute}
+          className="px-4 py-2 border-2 font-black tracking-wide hover:opacity-80"
+          style={{ 
+            backgroundColor: isDarkMode ? '#000' : '#000', 
+            color: isDarkMode ? '#8B9556' : '#8B9556',
+            borderColor: isDarkMode ? '#8B9556' : '#000'
+          }}
+          title={isMuted ? "Unmute" : "Mute"}
+        >
+          {isMuted ? "🔇" : "🔊"}
+        </button>
+        <button
+          onClick={onToggleDebug}
+          className="px-4 py-2 border-2 font-black tracking-wide hover:opacity-80"
+          style={{ 
+            backgroundColor: isDarkMode ? '#000' : '#000', 
+            color: isDarkMode ? '#8B9556' : '#8B9556',
+            borderColor: isDarkMode ? '#8B9556' : '#000'
+          }}
+          title="Toggle Debug Mode"
+        >
+          {showDebugNumbers ? "🐛" : "⚙️"}
+        </button>
+        <button
+          onClick={() => onToggleDarkMode && onToggleDarkMode()}
+          className="px-4 py-2 border-2 font-black tracking-wide hover:opacity-80"
+          style={{ 
+            backgroundColor: isDarkMode ? '#000' : '#000', 
+            color: isDarkMode ? '#8B9556' : '#8B9556',
+            borderColor: isDarkMode ? '#8B9556' : '#000'
+          }}
+          title="Toggle Dark Mode"
+        >
+          {isDarkMode ? '☀️' : '🌙'}
+        </button>
       </div>
 
       <div 
-        className="grid gap-0 border-2 border-gray-600 mb-4"
-        style={{ gridTemplateColumns: `repeat(${gridWidth}, 1fr)` }}
+        className="relative border-4 shadow-lg mb-6"
+        style={{
+          width: `${boardWidth + 8}px`,
+          height: `${boardHeight + 8}px`,
+          backgroundColor: isDarkMode ? '#000' : '#6B7A3D',
+          borderColor: isDarkMode ? '#8B9556' : '#000',
+          padding: '4px'
+        }}
       >
-        {renderBoard()}
+        {/* Snake segments */}
+        {snake.map((segment, index) => {
+          const segmentPadding = Math.floor(cellSize * 0.15) // Slightly more padding for better spacing
+          
+          return (
+            <div
+              key={`${segment.x}-${segment.y}-${index}`}
+              className="absolute rounded-lg"
+              style={{
+                left: `${segment.x * cellSize + segmentPadding}px`,
+                top: `${segment.y * cellSize + segmentPadding}px`,
+                width: `${cellSize - (segmentPadding * 2)}px`,
+                height: `${cellSize - (segmentPadding * 2)}px`,
+                backgroundColor: isDarkMode ? '#8B9556' : '#000'
+              }}
+            >
+              {showDebugNumbers && (
+                <div className="text-xs font-bold flex items-center justify-center h-full" 
+                     style={{ color: isDarkMode ? '#000' : '#8B9556' }}>
+                  {index}
+                </div>
+              )}
+            </div>
+          )
+        })}
+
+        {/* Food (+) */}
+        {food && (
+          <div
+            className="absolute flex items-center justify-center font-black animate-spin"
+            style={{
+              left: `${food.x * cellSize}px`,
+              top: `${food.y * cellSize}px`,
+              width: `${cellSize}px`,
+              height: `${cellSize}px`,
+              fontSize: `${cellSize * 0.8}px`,
+              color: isDarkMode ? '#A5B663' : '#000',
+              textShadow: isDarkMode ? '0 0 3px #8B9556' : 'none',
+              animationDuration: '2s'
+            }}
+          >
+            +
+          </div>
+        )}
+
+        {/* Start Game Overlay */}
+        {!gameStarted && !gameOver && !gameWon && (
+          <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+            <div className="p-8 border-4 shadow-lg" style={{ 
+              backgroundColor: isDarkMode ? '#1a1a1a' : '#8B9556', 
+              color: isDarkMode ? '#8B9556' : '#000',
+              borderColor: isDarkMode ? '#8B9556' : '#000'
+            }}>
+              <h2 className="text-3xl font-black mb-4 tracking-wider text-center">SNAKE GAME</h2>
+              <p className="text-xl font-bold mb-4 text-center">PRESS SPACE TO START</p>
+            </div>
+          </div>
+        )}
+
+        {/* Game Over Overlay */}
+        {gameOver && (
+          <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+            <div className="p-8 border-4 shadow-lg" style={{ 
+              backgroundColor: isDarkMode ? '#000' : '#8B9556', 
+              color: isDarkMode ? '#8B9556' : '#000',
+              borderColor: isDarkMode ? '#8B9556' : '#000'
+            }}>
+              <h2 className="text-3xl font-black mb-4 tracking-wider text-center">GAME OVER</h2>
+              <p className="text-xl font-bold mb-4 text-center">SCORE: {score}</p>
+              <div className="space-y-4 text-center">
+                <div className="text-sm font-bold">PRESS R TO RESTART</div>
+                <button
+                  onClick={onRestart}
+                  className="font-black py-3 px-8 border-2 hover:opacity-80"
+                  style={{ 
+                    backgroundColor: isDarkMode ? '#8B9556' : '#000', 
+                    color: isDarkMode ? '#000' : '#8B9556',
+                    borderColor: isDarkMode ? '#000' : '#000'
+                  }}
+                >
+                  RESTART
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Game Won Overlay */}
+        {gameWon && (
+          <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+            <div className="p-8 border-4 shadow-lg" style={{ 
+              backgroundColor: isDarkMode ? '#1a1a1a' : '#8B9556', 
+              color: isDarkMode ? '#8B9556' : '#000',
+              borderColor: isDarkMode ? '#8B9556' : '#000'
+            }}>
+              <h2 className="text-3xl font-black mb-4 tracking-wider text-center">YOU WON!</h2>
+              <p className="text-xl font-bold mb-4 text-center">PERFECT SCORE: {score}</p>
+              <div className="space-y-4 text-center">
+                <div className="text-sm font-bold">PRESS R TO PLAY AGAIN</div>
+                <button
+                  onClick={onRestart}
+                  className="font-black py-3 px-8 border-2 hover:opacity-80"
+                  style={{ 
+                    backgroundColor: isDarkMode ? '#8B9556' : '#000', 
+                    color: isDarkMode ? '#000' : '#8B9556',
+                    borderColor: isDarkMode ? '#000' : '#000'
+                  }}
+                >
+                  PLAY AGAIN
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+        {/* Start Game Overlay */}
+        {!gameStarted && !gameOver && !gameWon && (
+          <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+            <div className="p-8 border-4 shadow-lg" style={{ 
+              backgroundColor: isDarkMode ? '#1a1a1a' : '#8B9556', 
+              color: isDarkMode ? '#8B9556' : '#000',
+              borderColor: isDarkMode ? '#8B9556' : '#000'
+            }}>
+              <h2 className="text-3xl font-black mb-4 tracking-wider text-center">SNAKE GAME</h2>
+              <p className="text-xl font-bold mb-4 text-center">PRESS SPACE TO START</p>
+              <div className="space-y-4 text-center">
+                <div className="flex gap-2 justify-center">
+                  <button
+                    onClick={onBackToMenu}
+                    className="px-4 py-2 border-2 font-black tracking-wide hover:opacity-80"
+                    style={{ 
+                      backgroundColor: isDarkMode ? '#000' : '#000', 
+                      color: isDarkMode ? '#8B9556' : '#8B9556',
+                      borderColor: isDarkMode ? '#8B9556' : '#000'
+                    }}
+                  >
+                    ← MENU
+                  </button>
+                  <button
+                    onClick={onToggleMute}
+                    className="px-4 py-2 border-2 font-black tracking-wide hover:opacity-80"
+                    style={{ 
+                      backgroundColor: isDarkMode ? '#000' : '#000', 
+                      color: isDarkMode ? '#8B9556' : '#8B9556',
+                      borderColor: isDarkMode ? '#8B9556' : '#000'
+                    }}
+                    title={isMuted ? "Unmute" : "Mute"}
+                  >
+                    {isMuted ? "🔇" : "🔊"}
+                  </button>
+                  <button
+                    onClick={onToggleDebug}
+                    className="px-4 py-2 border-2 font-black tracking-wide hover:opacity-80"
+                    style={{ 
+                      backgroundColor: isDarkMode ? '#000' : '#000', 
+                      color: isDarkMode ? '#8B9556' : '#8B9556',
+                      borderColor: isDarkMode ? '#8B9556' : '#000'
+                    }}
+                    title="Toggle Debug Mode"
+                  >
+                    {showDebugNumbers ? "🐛" : "⚙️"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
       <div className="text-center">
-        {!gameStarted && !gameOver && (
-          <div>
-            <p className="text-lg mb-2">Waiting for backend connection...</p>
-            <div className="animate-pulse text-yellow-400">⚡ Connecting to server</div>
-          </div>
-        )}
-        
-        {gameWon && (
-          <div>
-            <p className="text-xl text-yellow-400 mb-4">🎉 YOU WIN! 🎉</p>
-            <p className="text-lg mb-2">Perfect Score: {score}</p>
-            <p className="text-sm text-green-400 mb-4">You filled the entire grid!</p>
-            <button
-              onClick={onRestart}
-              className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-md transition-colors duration-200"
-            >
-              Play Again (R)
-            </button>
-          </div>
-        )}
-        
-        {gameOver && !gameWon && (
-          <div>
-            <p className="text-xl text-red-500 mb-4">Game Over!</p>
-            <p className="text-lg mb-4">Final Score: {score}</p>
-            <button
-              onClick={onRestart}
-              className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-md transition-colors duration-200"
-            >
-              Restart Game (R)
-            </button>
-          </div>
-        )}
-
         {gameStarted && !gameOver && !gameWon && (
-          <p className="text-sm text-gray-400">Use arrow keys to move • Press R to restart</p>
+          <p className="text-sm font-bold text-center">USE ARROWS • PRESS R TO RESTART</p>
         )}
       </div>
 
-      <div className="mt-4 text-sm text-gray-500 text-center">
-        <p>Connection Status: {gameState.connected ? '🟢 Connected' : '🔴 Disconnected'}</p>
-        <p>Game State: {gameStarted ? (gameWon ? 'Victory!' : gameOver ? 'Game Over' : 'Active') : 'Waiting'}</p>
-        <p>Snake Length: {snake.length} / {gridWidth * gridHeight}</p>
-        <p>Grid: {gridWidth} × {gridHeight}</p>
+      <div className="flex justify-between items-center mt-6 font-black border-2 p-3" style={{ 
+        width: `${Math.max(boardWidth + 8, 400)}px`, 
+        backgroundColor: isDarkMode ? '#000' : '#6B7A3D', 
+        color: isDarkMode ? '#8B9556' : '#000',
+        borderColor: isDarkMode ? '#8B9556' : '#000'
+      }}>
+        <div>SCORE: {score}</div>
+        <div>SNAKE</div>
+        <div>LEVEL: 1</div>
       </div>
     </div>
   )
