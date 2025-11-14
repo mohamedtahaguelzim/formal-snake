@@ -10,6 +10,7 @@ function App() {
     food: null,
     score: 0,
     gameOver: false,
+    gameWon: false,
     gameStarted: false,
     gridWidth: 20,
     gridHeight: 20,
@@ -54,16 +55,26 @@ function App() {
     }
   }, [])
 
-  const handleStartGame = (config) => {
+  const handleStartGame = async (config) => {
+    // Send config to backend first and wait
+    websocketService.sendConfig(config)
+    
+    // Wait for config to be processed
+    await new Promise(resolve => setTimeout(resolve, 200))
+    
+    // Then update view and state
     setCurrentView('game')
     setGameState(prev => ({ 
       ...prev, 
       gridWidth: config.gridWidth, 
-      gridHeight: config.gridHeight 
+      gridHeight: config.gridHeight,
+      gameSpeed: config.gameSpeed,
+      showDebugNumbers: config.showDebugNumbers
     }))
     
-    // Send start game request to backend
-    websocketService.startGame(config)
+    // Finally start the game
+    await new Promise(resolve => setTimeout(resolve, 100))
+    websocketService.startGame()
   }
 
   const handleKeyPress = (key) => {
@@ -71,23 +82,25 @@ function App() {
     websocketService.sendInput(key)
   }
 
+  const handleRestart = () => {
+    // Send restart and start commands to backend
+    websocketService.restartGame()
+    // Give backend time to reset, then start new game
+    setTimeout(() => {
+      websocketService.startGame()
+    }, 100)
+  }
+
   const handleBackToMenu = () => {
+    // Send quit to backend to stop the game
+    websocketService.quitGame()
     setCurrentView('welcome')
-    // Reset game state
-    setGameState(prev => ({ 
-      ...prev,
-      snake: [],
-      food: null,
-      score: 0,
-      gameOver: false,
-      gameStarted: false
-    }))
   }
 
   return (
     <>
       {currentView === 'welcome' && (
-        <Welcome onStartGame={handleStartGame} />
+        <Welcome onStartGame={handleStartGame} connected={gameState.connected} />
       )}
       
       {currentView === 'game' && (
@@ -95,6 +108,7 @@ function App() {
           gameState={gameState}
           onKeyPress={handleKeyPress}
           onBackToMenu={handleBackToMenu}
+          onRestart={handleRestart}
         />
       )}
     </>

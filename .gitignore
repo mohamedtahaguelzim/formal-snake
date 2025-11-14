@@ -1,6 +1,5 @@
 # IDE and editor
 .metals/
-.vscode/
 .idea/
 
 # OS files

@@ -1,44 +1,79 @@
 import { useEffect } from 'react'
 
-function GameBoard({ gameState, onKeyPress, onBackToMenu }) {
-  const { snake = [], food = null, score = 0, gameOver = false, gridWidth = 20, gridHeight = 20, gameStarted = false } = gameState
+function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart }) {
+  const { snake = [], food = null, score = 0, gameOver = false, gameWon = false, gridWidth = 20, gridHeight = 20, gameStarted = false, showDebugNumbers = false } = gameState
 
   // Keyboard event listener
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Prevent default behavior for arrow keys
+      // Prevent default behavior for arrow keys and space
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
         e.preventDefault()
         onKeyPress(e.key)
+      }
+      // Handle restart with R key
+      if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault()
+        onRestart()
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onKeyPress])
+  }, [onKeyPress, onRestart])
+
+  // Calculate adaptive cell size based on grid dimensions
+  const calculateCellSize = () => {
+    const maxGridSize = 600 // Maximum container size in pixels
+    const cellSizeByWidth = Math.floor(maxGridSize / gridWidth)
+    const cellSizeByHeight = Math.floor(maxGridSize / gridHeight)
+    return Math.min(cellSizeByWidth, cellSizeByHeight, 30) // Cap at 30px max
+  }
+
+  const cellSize = calculateCellSize()
 
   // Render game board
   const renderBoard = () => {
     const board = []
     for (let y = 0; y < gridHeight; y++) {
       for (let x = 0; x < gridWidth; x++) {
-        const isSnake = snake.some(segment => segment.x === x && segment.y === y)
+        const snakeSegmentIndex = snake.findIndex(segment => segment.x === x && segment.y === y)
+        const isSnake = snakeSegmentIndex !== -1
         const isFood = food && food.x === x && food.y === y
-        const isHead = snake[0]?.x === x && snake[0]?.y === y
+        const isHead = snakeSegmentIndex === 0
+
+        // Calculate aggressive fading for snake body
+        let segmentColor = 'bg-gray-900'
+        if (isHead) {
+          segmentColor = 'bg-green-400'
+        } else if (isSnake) {
+          // Aggressive fading: fade from bright to very dark quickly
+          const fadePercent = Math.pow(snakeSegmentIndex / snake.length, 0.5) // Square root for aggressive fade
+          const brightness = Math.round(600 - fadePercent * 500) // From 600 (bright) to 100 (very dark)
+          segmentColor = `bg-green-${Math.max(100, Math.min(900, brightness))}`
+        } else if (isFood) {
+          segmentColor = 'bg-red-500'
+        }
+
+        const fontSize = Math.max(8, cellSize * 0.5) // Scale font with cell size
 
         board.push(
           <div
             key={`${x}-${y}`}
-            className={`w-4 h-4 border border-gray-700 ${
-              isHead 
-                ? 'bg-green-400' 
-                : isSnake 
-                ? 'bg-green-600' 
-                : isFood 
-                ? 'bg-red-500' 
-                : 'bg-gray-900'
-            }`}
-          />
+            className={`border border-gray-700 ${segmentColor} flex items-center justify-center font-bold`}
+            style={{
+              width: `${cellSize}px`,
+              height: `${cellSize}px`,
+              fontSize: `${fontSize}px`,
+              ...(isSnake && !isHead ? {
+                backgroundColor: `rgb(${22 - snakeSegmentIndex * 2}, ${163 - snakeSegmentIndex * 15}, ${74 - snakeSegmentIndex * 7})`
+              } : {})
+            }}
+          >
+            {showDebugNumbers && isSnake && (
+              <span className="text-white text-opacity-70">{snakeSegmentIndex}</span>
+            )}
+          </div>
         )
       }
     }
@@ -73,23 +108,42 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu }) {
           </div>
         )}
         
-        {gameOver && (
+        {gameWon && (
           <div>
-            <p className="text-xl text-red-500 mb-2">Game Over!</p>
-            <p className="text-lg mb-2">Final Score: {score}</p>
-            <p className="text-lg">Backend will handle restart</p>
+            <p className="text-xl text-yellow-400 mb-4">🎉 YOU WIN! 🎉</p>
+            <p className="text-lg mb-2">Perfect Score: {score}</p>
+            <p className="text-sm text-green-400 mb-4">You filled the entire grid!</p>
+            <button
+              onClick={onRestart}
+              className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-md transition-colors duration-200"
+            >
+              Play Again (R)
+            </button>
+          </div>
+        )}
+        
+        {gameOver && !gameWon && (
+          <div>
+            <p className="text-xl text-red-500 mb-4">Game Over!</p>
+            <p className="text-lg mb-4">Final Score: {score}</p>
+            <button
+              onClick={onRestart}
+              className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-md transition-colors duration-200"
+            >
+              Restart Game (R)
+            </button>
           </div>
         )}
 
-        {gameStarted && !gameOver && (
-          <p className="text-sm text-gray-400">Game controlled by backend - Use arrow keys</p>
+        {gameStarted && !gameOver && !gameWon && (
+          <p className="text-sm text-gray-400">Use arrow keys to move • Press R to restart</p>
         )}
       </div>
 
       <div className="mt-4 text-sm text-gray-500 text-center">
         <p>Connection Status: {gameState.connected ? '🟢 Connected' : '🔴 Disconnected'}</p>
-        <p>Game State: {gameStarted ? (gameOver ? 'Game Over' : 'Active') : 'Waiting'}</p>
-        <p>Snake Length: {snake.length}</p>
+        <p>Game State: {gameStarted ? (gameWon ? 'Victory!' : gameOver ? 'Game Over' : 'Active') : 'Waiting'}</p>
+        <p>Snake Length: {snake.length} / {gridWidth * gridHeight}</p>
         <p>Grid: {gridWidth} × {gridHeight}</p>
       </div>
     </div>
