@@ -5,6 +5,10 @@ import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import scala.concurrent.duration.*
 
+import stainless.lang._
+import stainless.collection._
+import stainless.annotation._
+
 object GameStateMachine:
   
   sealed trait Command
@@ -14,7 +18,7 @@ object GameStateMachine:
   case class ChangeDirection(direction: Direction) extends Command
   case object ResetGame extends Command
   case class GetState(replyTo: ActorRef[GameState]) extends Command
-  case class SetGameConfig(gridWidth: Int, gridHeight: Int, gameSpeed: Int, snakeStartSize: Int = 1) extends Command
+  case class SetGameConfig(gridWidth: BigInt, gridHeight: BigInt, gameSpeed: BigInt, snakeStartSize: BigInt = 1) extends Command
 
   def apply(): Behavior[Command] = waiting(GameState())
 
@@ -22,7 +26,7 @@ object GameStateMachine:
     Behaviors.receive { (context, message) =>
       message match
         case StartGame =>
-          val newState = GameLogic.initializeGame(state, scala.util.Random.nextInt())
+          val newState = GameLogic.initializeGame(state, BigInt(scala.util.Random.nextInt()))
           context.log.info("Game started!")
           scheduleNextTick(context, newState)
           playing(newState)
@@ -45,7 +49,7 @@ object GameStateMachine:
     Behaviors.receive { (context, message) =>
       message match
         case Tick =>
-          val newState = GameLogic.tickGame(state, scala.util.Random.nextInt())
+          val newState = GameLogic.tickGame(state, BigInt(scala.util.Random.nextInt()))
           if newState.status == GameStatus.GameOver then
             context.log.info(s"Game Over! Final score: ${newState.score}")
             gameOver(newState)
@@ -59,7 +63,7 @@ object GameStateMachine:
           
           // If turn-based mode (gameSpeed = 0), process tick immediately on input
           if state.config.gameSpeed == 0 then
-            val newState = GameLogic.tickGame(updatedState, scala.util.Random.nextInt())
+            val newState = GameLogic.tickGame(updatedState, BigInt(scala.util.Random.nextInt()))
             if newState.status == GameStatus.GameOver then
               context.log.info(s"Game Over! Final score: ${newState.score}")
               gameOver(newState)
@@ -116,4 +120,4 @@ object GameStateMachine:
     // Only schedule automatic ticks if gameSpeed > 0
     // When gameSpeed = 0, game is turn-based and only advances on player input
     if state.config.gameSpeed > 0 then
-      context.scheduleOnce(state.config.gameSpeed.millis, context.self, Tick)
+      context.scheduleOnce(state.config.gameSpeed.longValue.millis, context.self, Tick)

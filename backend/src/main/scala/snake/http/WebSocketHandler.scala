@@ -14,8 +14,12 @@ import scala.concurrent.duration.*
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
+import stainless.lang._
+import stainless.collection._
+import stainless.annotation._
+
 class WebSocketHandler(gameActor: ActorRef[GameStateMachine.Command])
-                      (implicit system: ActorSystem[_], ec: ExecutionContext):
+                      (implicit system: ActorSystem[?], ec: ExecutionContext):
   
   implicit val timeout: Timeout = 3.seconds
   
@@ -84,13 +88,13 @@ class WebSocketHandler(gameActor: ActorRef[GameStateMachine.Command])
       val response = GameStateResponse(
         snake = state.snake,
         food = state.food,
-        score = state.score,
+        score = state.score.toInt,
         gameOver = state.status == GameStatus.GameOver,
         gameWon = state.status == GameStatus.GameWon,
-        gridWidth = state.gridWidth,
-        gridHeight = state.gridHeight,
+        gridWidth = state.gridWidth.toInt,
+        gridHeight = state.gridHeight.toInt,
         gameStarted = state.status != GameStatus.Waiting,
-        stateNumber = state.stateNumber
+        stateNumber = state.stateNumber.toInt
       )
       response.toJson.toString
     }
@@ -100,17 +104,17 @@ class WebSocketHandler(gameActor: ActorRef[GameStateMachine.Command])
       .mapAsync(1) { _ =>
         gameActor.ask(GameStateMachine.GetState.apply).map { state =>
           if (state.stateNumber != lastStateNumber) {
-            lastStateNumber = state.stateNumber
+            lastStateNumber = state.stateNumber.toInt
             val response = GameStateResponse(
               snake = state.snake,
               food = state.food,
-              score = state.score,
+              score = state.score.toInt,
               gameOver = state.status == GameStatus.GameOver,
               gameWon = state.status == GameStatus.GameWon,
-              gridWidth = state.gridWidth,
-              gridHeight = state.gridHeight,
+              gridWidth = state.gridWidth.toInt,
+              gridHeight = state.gridHeight.toInt,
               gameStarted = state.status != GameStatus.Waiting,
-              stateNumber = state.stateNumber
+              stateNumber = state.stateNumber.toInt
             )
             Some(response.toJson.toString)
           } else {

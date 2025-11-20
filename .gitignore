@@ -1,6 +1,11 @@
+
+
 # IDE and editor
+.bloop/
+.stainless-cache/
 .metals/
 .idea/
+.vscode/
 
 # OS files
 .DS_Store

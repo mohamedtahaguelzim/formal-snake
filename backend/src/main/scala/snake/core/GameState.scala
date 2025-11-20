@@ -1,42 +1,63 @@
 package snake.core
 
-case class Position(x: Int, y: Int)
+import stainless.lang._
+import stainless.collection._
+import stainless.annotation._
 
 enum Direction:
   case Up, Down, Left, Right
+
+case class Position(x: BigInt, y: BigInt):
+  def +(other: Direction) =
+    other match
+      case Direction.Up    => Position(x, y - 1)
+      case Direction.Down  => Position(x, y + 1)
+      case Direction.Left  => Position(x - 1, y)
+      case Direction.Right => Position(x + 1, y)
+
+  def -(other: Direction) =
+    other match
+      case Direction.Up    => Position(x, y + 1)
+      case Direction.Down  => Position(x, y - 1)
+      case Direction.Left  => Position(x + 1, y)
+      case Direction.Right => Position(x - 1, y)
 
 enum GameStatus:
   case Waiting, Playing, GameOver, GameWon
 
 case class GameInput(
-  direction: Option[Direction] = None,
-  startGame: Boolean = false,
-  resetGame: Boolean = false,
-  stopGame: Boolean = false
-)
+    direction: Option[Direction] = None(),
+    startGame: Boolean = false,
+    resetGame: Boolean = false,
+    stopGame: Boolean = false
+):
+  require(true) // change to: (direction != None xor startGame xor ...)
 
 case class GameConfig(
-  gridWidth: Int = 20,
-  gridHeight: Int = 20,
-  gameSpeed: Int = 200,
-  snakeStartSize: Int = 1
-)
+    gridWidth: BigInt = 20,
+    gridHeight: BigInt = 20,
+    gameSpeed: BigInt = 200,
+    snakeStartSize: BigInt = 1
+):
+  require(gridWidth > 0 && gridHeight > 0 && gameSpeed >= 0 && snakeStartSize > 0)
 
 case class GameState(
-  snake: List[Position] = List.empty,
-  food: Option[Position] = None,
-  direction: Direction = Direction.Right,
-  score: Int = 0,
-  status: GameStatus = GameStatus.Waiting,
-  config: GameConfig = GameConfig(),
-  stateNumber: Long = 0,
-  pendingDirection: Option[Direction] = None
+    snake: List[Position] = Nil(),
+    food: Option[Position] = None(),
+    direction: Direction = Direction.Right,
+    score: BigInt = 0,
+    status: GameStatus = GameStatus.Waiting,
+    config: GameConfig = GameConfig(),
+    stateNumber: BigInt = 0,
+    pendingDirection: Option[Direction] = None()
 ):
-  def gridWidth: Int = config.gridWidth
-  def gridHeight: Int = config.gridHeight
-  
-  def initialSnakePosition: Position = Position(gridWidth / 2, gridHeight / 2)
-  
+  def gridWidth: BigInt = config.gridWidth
+  def gridHeight: BigInt = config.gridHeight
+
+  def initialSnakePosition: Position= {
+    Position(gridWidth / 2, gridHeight / 2)
+  }.ensuring(isValidPosition(_))
+
   def isValidPosition(pos: Position): Boolean =
     pos.x >= 0 && pos.x < gridWidth && pos.y >= 0 && pos.y < gridHeight
 
@@ -46,9 +67,4 @@ case class GameState(
   def nextHeadPosition: Position =
     if snake.isEmpty then initialSnakePosition
     else
-      val head = snake.head
-      direction match
-        case Direction.Up => Position(head.x, head.y - 1)
-        case Direction.Down => Position(head.x, head.y + 1)
-        case Direction.Left => Position(head.x - 1, head.y)
-        case Direction.Right => Position(head.x + 1, head.y)
+      snake.head + direction

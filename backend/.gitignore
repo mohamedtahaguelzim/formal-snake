@@ -31,7 +31,6 @@ project/project/target/
 # sbt specific files
 /.history/
 /.cache/
-/lib/
 /dist/
 
 # MacOS specific files
