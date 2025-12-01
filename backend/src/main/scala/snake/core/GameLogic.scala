@@ -25,9 +25,13 @@ object GameLogic:
       size: BigInt,
       direction: Direction
   ): List[Position] = {
+    require(size >= 0)
     if size <= 0 then Nil()
     else headPos :: createInitialSnake(headPos - direction, size - 1, direction)
-  } // .ensuring(res => res.unique == res)
+  }.ensuring(res => continuous(res) &&
+    size == 0 ==> res.isEmpty &&
+    size > 0  ==> res.nonEmpty && res.length == size
+  )
 
   def initializeGame(state: GameState, foodSeed: BigInt): GameState = {
     val initialSnake = createInitialSnake(
@@ -84,6 +88,7 @@ object GameLogic:
   }
 
   def processGameTick(state: GameState, foodSeed: BigInt): GameState = {
+    require(validPlayingState(state))
     val currState = state.pendingDirection match
       case Some(dir) => state.copy(direction = dir, pendingDirection = None())
       case None()    => state
@@ -96,12 +101,15 @@ object GameLogic:
       )
     else
       val ateFood = currState.food == Some(newHead)
-      val newSnake = newHead ::
+      val newTail = 
         (if ateFood then currState.snake
-         else currState.snake.take(currState.snake.length - 1))
-
+        else withoutLast(currState.snake))
+      val newSnake = newHead :: newTail
       val newScore = currState.score + (if ateFood then 10 else 0)
       val hasWon = newSnake.length == currState.gridWidth * currState.gridHeight
+
+      assert(adjacent(currState.snake.head, newHead))
+      if (!ateFood) withoutLastContinuous(currState.snake)
 
       if hasWon then
         currState.copy(
@@ -120,7 +128,9 @@ object GameLogic:
           score = newScore,
           stateNumber = currState.stateNumber + 1
         )
-  }
+  }.ensuring(res =>
+    res.status == GameStatus.Playing ==> validPlayingState(res)
+  )
 
   def transition(
       state: GameState,
@@ -154,5 +164,5 @@ object GameLogic:
         state
 
   def tickGame(state: GameState, foodSeed: BigInt): GameState =
-    if state.status == GameStatus.Playing then processGameTick(state, foodSeed)
+    if validPlayingState(state) then processGameTick(state, foodSeed)
     else state
