@@ -10,32 +10,40 @@ def adjacent(a: Position, b: Position): Boolean =
   (a.x == b.x && abs(a.y - b.y) == 1) ||
   (a.y == b.y && abs(a.x - b.x) == 1)
 
-def continuous(snake: List[Position]): Boolean = 
+def continuous(snake: List[Position]): Boolean =
   snake match
-    case Nil()            => true
-    case Cons(_, Nil())   => true
-    case Cons(h1, Cons(h2, t)) =>
-      adjacent(h1, h2) && continuous(Cons(h2, t))
+    case Cons(h1, Cons(h2, t)) => adjacent(h1, h2) && continuous(Cons(h2, t))
+    case _                     => true
 
 def withoutLast(s: List[Position]): List[Position] = s match
-  case Nil()               => Nil()
-  case Cons(_, Nil())      => Nil()
-  case Cons(h, t)          => Cons(h, withoutLast(t))
+  case Cons(h, t @ Cons(hh, tt)) => Cons(h, withoutLast(t))
+  case _                         => Nil()
 
-def withoutLastContinuous(s: List[Position]): Boolean = {
+def withoutLastContinuous(@induct s: List[Position]): Unit = {
   require(continuous(s))
-  s match
-    case Nil() =>
-      true
-    case Cons(_, Nil()) =>
-      true
-    case Cons(h1, t @ Cons(h2, _)) =>
-      withoutLastContinuous(t)
-}.ensuring(_ => 
-    continuous(withoutLast(s))
-)
+}.ensuring(_ => continuous(withoutLast(s)))
+
+def withinBounds(
+    snake: List[Position],
+    width: BigInt,
+    height: BigInt
+): Boolean =
+  snake.forall(p => 0 <= p.x && p.x < width && 0 <= p.y && p.y < height)
+
+def withoutLastWithinBounds(
+    @induct s: List[Position],
+    width: BigInt,
+    height: BigInt
+): Unit = {
+  require(withinBounds(s, width, height))
+}.ensuring(_ => withinBounds(withoutLast(s), width, height))
+
+def noSelfIntersection(snake: List[Position]): Boolean =
+  snake.unique == snake
 
 def validPlayingState(s: GameState): Boolean =
-    s.status == GameStatus.Playing &&
+  s.status == GameStatus.Playing &&
     s.snake.nonEmpty &&
+    withinBounds(s.snake, s.gridWidth, s.gridHeight) &&
+    // noSelfIntersection(s.snake) &&
     continuous(s.snake)

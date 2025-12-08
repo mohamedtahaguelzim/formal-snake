@@ -25,12 +25,12 @@ object GameLogic:
       size: BigInt,
       direction: Direction
   ): List[Position] = {
-    require(size >= 0)
     if size <= 0 then Nil()
     else headPos :: createInitialSnake(headPos - direction, size - 1, direction)
-  }.ensuring(res => continuous(res) &&
-    size == 0 ==> res.isEmpty &&
-    size > 0  ==> res.nonEmpty && res.length == size
+  }.ensuring(res =>
+    continuous(res) &&
+      (size == 0 ==> res.isEmpty) &&
+      (size > 0 ==> (res.length == size))
   )
 
   def initializeGame(state: GameState, foodSeed: BigInt): GameState = {
@@ -58,7 +58,7 @@ object GameLogic:
       stateNumber = 0,
       pendingDirection = None()
     )
-  }.ensuring(res => res.gridWidth == config.gridWidth) // dummy ensuring...
+  }
 
   def isOppositeDirection(current: Direction, newDir: Direction): Boolean = {
     (current, newDir) match
@@ -67,7 +67,7 @@ object GameLogic:
       case (Direction.Left, Direction.Right) => true
       case (Direction.Right, Direction.Left) => true
       case _                                 => false
-  }.ensuring(res => (current != newDir || !res)) // dummy ensuring...
+  }
 
   def queueDirectionChange(
       state: GameState,
@@ -101,15 +101,15 @@ object GameLogic:
       )
     else
       val ateFood = currState.food == Some(newHead)
-      val newTail = 
+      val newTail =
         (if ateFood then currState.snake
-        else withoutLast(currState.snake))
+         else withoutLast(currState.snake))
       val newSnake = newHead :: newTail
       val newScore = currState.score + (if ateFood then 10 else 0)
       val hasWon = newSnake.length == currState.gridWidth * currState.gridHeight
 
-      assert(adjacent(currState.snake.head, newHead))
-      if (!ateFood) withoutLastContinuous(currState.snake)
+      withoutLastContinuous(currState.snake)
+      withoutLastWithinBounds(currState.snake, currState.gridWidth, currState.gridHeight)
 
       if hasWon then
         currState.copy(
@@ -128,9 +128,7 @@ object GameLogic:
           score = newScore,
           stateNumber = currState.stateNumber + 1
         )
-  }.ensuring(res =>
-    res.status == GameStatus.Playing ==> validPlayingState(res)
-  )
+  }.ensuring(res => res.status == GameStatus.Playing ==> validPlayingState(res))
 
   def transition(
       state: GameState,

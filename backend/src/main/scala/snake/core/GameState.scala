@@ -39,7 +39,10 @@ case class GameConfig(
     gameSpeed: BigInt = 200,
     snakeStartSize: BigInt = 1
 ):
-  require(gridWidth > 0 && gridHeight > 0 && gameSpeed >= 0 && snakeStartSize > 0)
+  require(
+    gridWidth > 0 && gridHeight > 0 && gameSpeed >= 0 &&
+      0 < snakeStartSize && snakeStartSize <= 1 + gridWidth / 2
+  )
 
 case class GameState(
     snake: List[Position] = Nil(),
@@ -54,17 +57,16 @@ case class GameState(
   def gridWidth: BigInt = config.gridWidth
   def gridHeight: BigInt = config.gridHeight
 
-  def initialSnakePosition: Position= {
+  def initialSnakePosition: Position = {
     Position(gridWidth / 2, gridHeight / 2)
   }.ensuring(isValidPosition(_))
 
   def isValidPosition(pos: Position): Boolean =
-    pos.x >= 0 && pos.x < gridWidth && pos.y >= 0 && pos.y < gridHeight
+    0 <= pos.x && pos.x < gridWidth && 0 <= pos.y && pos.y < gridHeight
 
   def hasCollision(newHead: Position): Boolean =
     !isValidPosition(newHead) || snake.contains(newHead)
 
   def nextHeadPosition: Position =
     if snake.isEmpty then initialSnakePosition
-    else
-      snake.head + direction
+    else snake.head + direction
