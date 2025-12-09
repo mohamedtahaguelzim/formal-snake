@@ -5,8 +5,9 @@ import stainless.collection._
 import stainless.annotation._
 
 object GameLogic:
-  @extern // because of until...
+  @extern // because of until... (assert and ensuring is not verified...)
   def generateFood(state: GameState, seed: BigInt): Position = {
+    require(validPlayingState(state))
     val emptyPositions = (
       for
         x <- (BigInt(0) until state.gridWidth)
@@ -16,17 +17,22 @@ object GameLogic:
       yield pos
     ).toList
 
-    if emptyPositions.isEmpty then Position(0, 0) // this should never happen!
-    else emptyPositions((seed.abs % emptyPositions.length).toInt)
-  }
+    // this is valid since for a valid state, snake.length < width * height.
+    assert(emptyPositions.nonEmpty)
+    // this is valid since the list is non-empty and the index if valid.
+    emptyPositions((seed.abs % emptyPositions.length).toInt)
+    // this is valid since we filter out the snake positions.
+  }.ensuring(pos => !state.snake.contains(pos))
 
   def initializeGame(state: GameState, foodSeed: BigInt): GameState = {
-    val initialSnake = List(state.initialSnakePosition)
-    state.copy(
-      status = GameStatus.Playing,
-      snake = initialSnake,
-      food = Some(generateFood(state.copy(snake = initialSnake), foodSeed)),
-      stateNumber = state.stateNumber + 1
+    val withoutFood =
+      state.copy(
+        status = GameStatus.Playing,
+        snake = List(state.initialSnakePosition),
+        stateNumber = state.stateNumber + 1
+      )
+    withoutFood.copy(
+      food = Some(generateFood(withoutFood, foodSeed))
     )
   }.ensuring(validPlayingState(_))
 
