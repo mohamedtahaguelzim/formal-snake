@@ -13,10 +13,6 @@ function Welcome({ onStartGame, connected, isDarkMode, setIsDarkMode }) {
     const saved = localStorage.getItem('snakeGameSpeed')
     return saved ? parseInt(saved) : 500
   })
-  const [snakeStartSize, setSnakeStartSize] = useState(() => {
-    const saved = localStorage.getItem('snakeStartSize')
-    return saved ? parseInt(saved) : 1
-  })
   const [isTurnBased, setIsTurnBased] = useState(() => {
     const saved = localStorage.getItem('snakeIsTurnBased')
     return saved ? saved === 'true' : false
@@ -36,10 +32,6 @@ function Welcome({ onStartGame, connected, isDarkMode, setIsDarkMode }) {
   }, [gameSpeed])
 
   useEffect(() => {
-    localStorage.setItem('snakeStartSize', snakeStartSize)
-  }, [snakeStartSize])
-
-  useEffect(() => {
     localStorage.setItem('snakeIsTurnBased', isTurnBased)
   }, [isTurnBased])
 
@@ -47,18 +39,6 @@ function Welcome({ onStartGame, connected, isDarkMode, setIsDarkMode }) {
   useEffect(() => {
     localStorage.setItem('snakeIsDarkMode', isDarkMode)
   }, [isDarkMode])
-
-  const incrementStartSize = () => {
-    if (snakeStartSize < 10) {
-      setSnakeStartSize(snakeStartSize + 1)
-    }
-  }
-
-  const decrementStartSize = () => {
-    if (snakeStartSize > 1) {
-      setSnakeStartSize(snakeStartSize - 1)
-    }
-  }
 
   const getSpeedLevels = () => {
     return [5000, 2000, 1000, 750, 500, 350, 200, 150, 100, 50] // 10 levels from 5s to 50ms
@@ -88,11 +68,13 @@ function Welcome({ onStartGame, connected, isDarkMode, setIsDarkMode }) {
   }
 
   const handleStart = () => {
+    // Ensure minimum grid size of 3 before sending to backend
+    const w = Math.max(3, parseInt(gridWidth) || 0)
+    const h = Math.max(3, parseInt(gridHeight) || 0)
     onStartGame({
-      gridWidth: parseInt(gridWidth),
-      gridHeight: parseInt(gridHeight),
+      gridWidth: w,
+      gridHeight: h,
       gameSpeed: isTurnBased ? 0 : parseInt(gameSpeed),
-      snakeStartSize: parseInt(snakeStartSize)
     })
   }
 
@@ -220,57 +202,11 @@ function Welcome({ onStartGame, connected, isDarkMode, setIsDarkMode }) {
             </div>
             {!isTurnBased && (
               <p className="text-xs font-bold text-center">
-                {gameSpeed >= 1000 ? `${(gameSpeed/1000).toFixed(1)}S` : `${gameSpeed}MS`} INTERVAL
+                {gameSpeed >= 1000 ? `${(gameSpeed / 1000).toFixed(1)}S` : `${gameSpeed}MS`} INTERVAL
               </p>
             )}
           </div>
 
-          <div>
-            <label className="block text-sm font-black mb-2 tracking-wide">START SIZE:</label>
-            <div className="flex items-center gap-2 mb-2">
-              <button
-                onClick={decrementStartSize}
-                disabled={snakeStartSize <= 1}
-                className="w-8 h-8 border-2 border-black font-black text-xl flex items-center justify-center hover:opacity-80 disabled:opacity-50"
-                style={{ 
-                  backgroundColor: snakeStartSize <= 1 ? '#666' : (isDarkMode ? '#8B9556' : '#000'), 
-                  color: isDarkMode ? '#000' : '#8B9556',
-                  borderColor: isDarkMode ? '#8B9556' : '#000'
-                }}
-              >
-                -
-              </button>
-              <div className="flex-1 flex items-center gap-1 p-2 border-2" style={{ 
-                backgroundColor: isDarkMode ? '#000' : '#6B7A3D', 
-                minHeight: '40px',
-                borderColor: isDarkMode ? '#8B9556' : '#000'
-              }}>
-                {Array.from({ length: snakeStartSize }, (_, index) => (
-                  <div
-                    key={index}
-                    className="w-6 h-6 border rounded-sm"
-                    style={{ 
-                      backgroundColor: isDarkMode ? '#8B9556' : '#000',
-                      borderColor: isDarkMode ? '#6B7A3D' : '#000'
-                    }}
-                  />
-                ))}
-              </div>
-              <button
-                onClick={incrementStartSize}
-                disabled={snakeStartSize >= 10}
-                className="w-8 h-8 border-2 border-black font-black text-xl flex items-center justify-center hover:opacity-80 disabled:opacity-50"
-                style={{ 
-                  backgroundColor: snakeStartSize >= 10 ? '#666' : (isDarkMode ? '#8B9556' : '#000'), 
-                  color: isDarkMode ? '#000' : '#8B9556',
-                  borderColor: isDarkMode ? '#8B9556' : '#000'
-                }}
-              >
-                +
-              </button>
-            </div>
-            <p className="text-xs font-bold text-center">{snakeStartSize} SEGMENT{snakeStartSize !== 1 ? 'S' : ''}</p>
-          </div>
         </div>
 
         <button

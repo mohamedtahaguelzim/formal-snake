@@ -18,7 +18,7 @@ object GameStateMachine:
   case class ChangeDirection(direction: Direction) extends Command
   case object ResetGame extends Command
   case class GetState(replyTo: ActorRef[GameState]) extends Command
-  case class SetGameConfig(gridWidth: BigInt, gridHeight: BigInt, gameSpeed: BigInt, snakeStartSize: BigInt = 1) extends Command
+  case class SetGameConfig(gridWidth: BigInt, gridHeight: BigInt, gameSpeed: BigInt) extends Command
 
   def apply(): Behavior[Command] = waiting(GameState())
 
@@ -31,9 +31,9 @@ object GameStateMachine:
           scheduleNextTick(context, newState)
           playing(newState)
           
-        case SetGameConfig(width, height, speed, startSize) =>
-          context.log.info(s"Game configured: ${width}x${height}, speed: ${speed}ms, start size: ${startSize}")
-          val newConfig = GameConfig(width, height, speed, startSize)
+        case SetGameConfig(width, height, speed) =>
+          context.log.info(s"Game configured: ${width}x${height}, speed: ${speed}ms")
+          val newConfig = GameConfig(width, height, speed)
           waiting(state.copy(config = newConfig, stateNumber = state.stateNumber + 1))
           
         case GetState(replyTo) =>
@@ -51,7 +51,8 @@ object GameStateMachine:
         case Tick =>
           val newState = GameLogic.tickGame(state, BigInt(scala.util.Random.nextInt()))
           if newState.status == GameStatus.GameOver then
-            context.log.info(s"Game Over! Final score: ${newState.score}")
+            val finalScore = ((newState.snake.length - 1) * 10).toInt
+            context.log.info(s"Game Over! Final score: ${finalScore}")
             gameOver(newState)
           else
             scheduleNextTick(context, newState)
@@ -65,7 +66,8 @@ object GameStateMachine:
           if state.config.gameSpeed == 0 then
             val newState = GameLogic.tickGame(updatedState, BigInt(scala.util.Random.nextInt()))
             if newState.status == GameStatus.GameOver then
-              context.log.info(s"Game Over! Final score: ${newState.score}")
+              val finalScore = ((newState.snake.length - 1) * 10).toInt
+              context.log.info(s"Game Over! Final score: ${finalScore}")
               gameOver(newState)
             else
               playing(newState)
@@ -102,9 +104,9 @@ object GameStateMachine:
           context.log.info("Stopping game from game over")
           waiting(GameLogic.resetGame(state.config))
           
-        case SetGameConfig(width, height, speed, startSize) =>
-          context.log.info(s"Game configured from game over: ${width}x${height}, speed: ${speed}ms, start size: ${startSize}")
-          val newConfig = GameConfig(width, height, speed, startSize)
+        case SetGameConfig(width, height, speed) =>
+          context.log.info(s"Game configured from game over: ${width}x${height}, speed: ${speed}ms")
+          val newConfig = GameConfig(width, height, speed)
           waiting(GameLogic.resetGame(newConfig))
           
         case GetState(replyTo) =>

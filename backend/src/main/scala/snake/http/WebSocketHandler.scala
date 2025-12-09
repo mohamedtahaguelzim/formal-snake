@@ -44,7 +44,7 @@ class WebSocketHandler(gameActor: ActorRef[GameStateMachine.Command])
       // Check if it's a config message
       if (json.fields.contains("gridWidth")) {
         val config = json.convertTo[GameConfigMessage]
-        gameActor ! GameStateMachine.SetGameConfig(config.gridWidth, config.gridHeight, config.gameSpeed, config.snakeStartSize)
+        gameActor ! GameStateMachine.SetGameConfig(config.gridWidth, config.gridHeight, config.gameSpeed)
         getCurrentGameState.map(TextMessage.Strict(_))
       } else {
         // Otherwise it's a key press
@@ -88,7 +88,6 @@ class WebSocketHandler(gameActor: ActorRef[GameStateMachine.Command])
       val response = GameStateResponse(
         snake = state.snake,
         food = state.food,
-        score = state.score.toInt,
         gameOver = state.status == GameStatus.GameOver,
         gameWon = state.status == GameStatus.GameWon,
         gridWidth = state.gridWidth.toInt,
@@ -108,7 +107,6 @@ class WebSocketHandler(gameActor: ActorRef[GameStateMachine.Command])
             val response = GameStateResponse(
               snake = state.snake,
               food = state.food,
-              score = state.score.toInt,
               gameOver = state.status == GameStatus.GameOver,
               gameWon = state.status == GameStatus.GameWon,
               gridWidth = state.gridWidth.toInt,

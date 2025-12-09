@@ -10,7 +10,7 @@ object GameLogic:
     val emptyPositions = (
       for
         x <- (BigInt(0) until state.gridWidth)
-        y <- (BigInt(0) until state.gridWidth)
+        y <- (BigInt(0) until state.gridHeight)
         pos = Position(x, y)
         if !state.snake.contains(pos)
       yield pos
@@ -20,39 +20,21 @@ object GameLogic:
     else emptyPositions((seed.abs % emptyPositions.length).toInt)
   }
 
-  def createInitialSnake(
-      headPos: Position,
-      size: BigInt,
-      direction: Direction
-  ): List[Position] = {
-    if size <= 0 then Nil()
-    else headPos :: createInitialSnake(headPos - direction, size - 1, direction)
-  }.ensuring(res =>
-    continuous(res) &&
-      (size == 0 ==> res.isEmpty) &&
-      (size > 0 ==> (res.length == size))
-  )
-
   def initializeGame(state: GameState, foodSeed: BigInt): GameState = {
-    val initialSnake = createInitialSnake(
-      state.initialSnakePosition,
-      state.config.snakeStartSize,
-      state.direction
-    )
+    val initialSnake = List(state.initialSnakePosition)
     state.copy(
       status = GameStatus.Playing,
       snake = initialSnake,
       food = Some(generateFood(state.copy(snake = initialSnake), foodSeed)),
       stateNumber = state.stateNumber + 1
     )
-  }
+  }.ensuring(validPlayingState(_))
 
   def resetGame(config: GameConfig): GameState = {
     GameState(
       snake = Nil(),
       food = None(),
       direction = Direction.Right,
-      score = 0,
       status = GameStatus.Waiting,
       config = config,
       stateNumber = 0,
@@ -105,7 +87,6 @@ object GameLogic:
         (if ateFood then currState.snake
          else withoutLast(currState.snake))
       val newSnake = newHead :: newTail
-      val newScore = currState.score + (if ateFood then 10 else 0)
       val hasWon = newSnake.length == currState.gridWidth * currState.gridHeight
 
       withoutLastContinuous(currState.snake)
@@ -116,7 +97,6 @@ object GameLogic:
           snake = newSnake,
           food = None(),
           status = GameStatus.GameWon,
-          score = newScore,
           stateNumber = currState.stateNumber + 1
         )
       else
@@ -125,7 +105,6 @@ object GameLogic:
           food =
             if !ateFood then currState.food
             else Some(generateFood(currState.copy(snake = newSnake), foodSeed)),
-          score = newScore,
           stateNumber = currState.stateNumber + 1
         )
   }.ensuring(res => res.status == GameStatus.Playing ==> validPlayingState(res))

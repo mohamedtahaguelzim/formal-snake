@@ -36,19 +36,14 @@ case class GameInput(
 case class GameConfig(
     gridWidth: BigInt = 20,
     gridHeight: BigInt = 20,
-    gameSpeed: BigInt = 200,
-    snakeStartSize: BigInt = 1
+    gameSpeed: BigInt = 200
 ):
-  require(
-    gridWidth > 0 && gridHeight > 0 && gameSpeed >= 0 &&
-      0 < snakeStartSize && snakeStartSize <= 1 + gridWidth / 2
-  )
+  require(gridWidth >= 3 && gridHeight >= 3 && gameSpeed >= 0)
 
 case class GameState(
     snake: List[Position] = Nil(),
     food: Option[Position] = None(),
     direction: Direction = Direction.Right,
-    score: BigInt = 0,
     status: GameStatus = GameStatus.Waiting,
     config: GameConfig = GameConfig(),
     stateNumber: BigInt = 0,

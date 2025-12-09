@@ -2,17 +2,19 @@ import { useEffect, useRef } from 'react'
 import soundService from '../services/sound'
 
 function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, onToggleMute, onToggleDebug, isDarkMode, onToggleDarkMode }) {
-  const { 
-    snake = [], 
-    food = null, 
-    score = 0, 
-    gameOver = false, 
-    gameWon = false, 
-    gridWidth = 20, 
-    gridHeight = 20, 
-    gameStarted = false, 
+  const {
+    snake = [],
+    food = null,
+    gameOver = false,
+    gameWon = false,
+    gridWidth = 20,
+    gridHeight = 20,
+    gameStarted = false,
     showDebugNumbers = false,
   } = gameState
+
+  // Score is derived from snake length: 10 points per eaten segment.
+  const score = 10 * Math.max(0, (snake ? snake.length : 0) - 1)
 
   const prevGameState = useRef({})
 
@@ -23,10 +25,10 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, on
       document.removeEventListener('click', handleFirstInteraction)
       document.removeEventListener('keydown', handleFirstInteraction)
     }
-    
+
     document.addEventListener('click', handleFirstInteraction)
     document.addEventListener('keydown', handleFirstInteraction)
-    
+
     return () => {
       document.removeEventListener('click', handleFirstInteraction)
       document.removeEventListener('keydown', handleFirstInteraction)
@@ -35,24 +37,25 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, on
 
   // Sound effects based on game state changes
   useEffect(() => {
+    const prevScore = prevGameState.current.score || 0
     // Check for score increase (food eaten)
-    if (score > (prevGameState.current.score || 0)) {
+    if (score > prevScore) {
       soundService.playEatSound()
     }
-    
+
     // Check for game over
     if (gameOver && !prevGameState.current.gameOver) {
       soundService.playGameOverSound()
     }
-    
+
     // Check for game won
     if (gameWon && !prevGameState.current.gameWon) {
       soundService.playWinSound()
     }
-    
+
     // Update previous state
     prevGameState.current = { score, gameOver, gameWon }
-  }, [score, gameOver, gameWon])
+  }, [snake, gameOver, gameWon])
 
   // Keyboard event listener
   useEffect(() => {
@@ -81,15 +84,15 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, on
   const calculateCellSize = () => {
     const viewportWidth = window.innerWidth * 0.5 // 50% of screen width
     const viewportHeight = window.innerHeight * 0.6 // Consider height too
-    
+
     const cellSizeByWidth = Math.floor(viewportWidth / gridWidth)
     const cellSizeByHeight = Math.floor(viewportHeight / gridHeight)
     const calculatedSize = Math.min(cellSizeByWidth, cellSizeByHeight)
-    
+
     // More aggressive scaling for small grids
     const minCellSize = Math.max(25, Math.floor(300 / Math.max(gridWidth, gridHeight)))
     const maxCellSize = 60
-    
+
     return Math.max(minCellSize, Math.min(calculatedSize, maxCellSize))
   }
 
@@ -101,7 +104,7 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, on
   const boardHeight = cellSize * gridHeight
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4" style={{ 
+    <div className="flex flex-col items-center justify-center min-h-screen p-4" style={{
       backgroundColor: isDarkMode ? '#1a1a1a' : '#8B9556',
       color: isDarkMode ? '#8B9556' : '#000'
     }}>
@@ -109,8 +112,8 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, on
         <button
           onClick={onBackToMenu}
           className="px-4 py-2 border-2 font-black tracking-wide hover:opacity-80"
-          style={{ 
-            backgroundColor: isDarkMode ? '#000' : '#000', 
+          style={{
+            backgroundColor: isDarkMode ? '#000' : '#000',
             color: isDarkMode ? '#8B9556' : '#8B9556',
             borderColor: isDarkMode ? '#8B9556' : '#000'
           }}
@@ -120,8 +123,8 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, on
         <button
           onClick={onToggleMute}
           className="px-4 py-2 border-2 font-black tracking-wide hover:opacity-80"
-          style={{ 
-            backgroundColor: isDarkMode ? '#000' : '#000', 
+          style={{
+            backgroundColor: isDarkMode ? '#000' : '#000',
             color: isDarkMode ? '#8B9556' : '#8B9556',
             borderColor: isDarkMode ? '#8B9556' : '#000'
           }}
@@ -132,8 +135,8 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, on
         <button
           onClick={onToggleDebug}
           className="px-4 py-2 border-2 font-black tracking-wide hover:opacity-80"
-          style={{ 
-            backgroundColor: isDarkMode ? '#000' : '#000', 
+          style={{
+            backgroundColor: isDarkMode ? '#000' : '#000',
             color: isDarkMode ? '#8B9556' : '#8B9556',
             borderColor: isDarkMode ? '#8B9556' : '#000'
           }}
@@ -144,8 +147,8 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, on
         <button
           onClick={() => onToggleDarkMode && onToggleDarkMode()}
           className="px-4 py-2 border-2 font-black tracking-wide hover:opacity-80"
-          style={{ 
-            backgroundColor: isDarkMode ? '#000' : '#000', 
+          style={{
+            backgroundColor: isDarkMode ? '#000' : '#000',
             color: isDarkMode ? '#8B9556' : '#8B9556',
             borderColor: isDarkMode ? '#8B9556' : '#000'
           }}
@@ -155,7 +158,7 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, on
         </button>
       </div>
 
-      <div 
+      <div
         className="relative border-4 shadow-lg mb-6"
         style={{
           width: `${boardWidth + 8}px`,
@@ -168,7 +171,7 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, on
         {/* Snake segments */}
         {snake.map((segment, index) => {
           const segmentPadding = Math.floor(cellSize * 0.15) // Slightly more padding for better spacing
-          
+
           return (
             <div
               key={`${segment.x}-${segment.y}-${index}`}
@@ -182,8 +185,8 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, on
               }}
             >
               {showDebugNumbers && (
-                <div className="text-xs font-bold flex items-center justify-center h-full" 
-                     style={{ color: isDarkMode ? '#000' : '#8B9556' }}>
+                <div className="text-xs font-bold flex items-center justify-center h-full"
+                  style={{ color: isDarkMode ? '#000' : '#8B9556' }}>
                   {index}
                 </div>
               )}
@@ -213,8 +216,8 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, on
         {/* Start Game Overlay */}
         {!gameStarted && !gameOver && !gameWon && (
           <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
-            <div className="p-8 border-4 shadow-lg" style={{ 
-              backgroundColor: isDarkMode ? '#1a1a1a' : '#8B9556', 
+            <div className="p-8 border-4 shadow-lg" style={{
+              backgroundColor: isDarkMode ? '#1a1a1a' : '#8B9556',
               color: isDarkMode ? '#8B9556' : '#000',
               borderColor: isDarkMode ? '#8B9556' : '#000'
             }}>
@@ -227,8 +230,8 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, on
         {/* Game Over Overlay */}
         {gameOver && (
           <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
-            <div className="p-8 border-4 shadow-lg" style={{ 
-              backgroundColor: isDarkMode ? '#000' : '#8B9556', 
+            <div className="p-8 border-4 shadow-lg" style={{
+              backgroundColor: isDarkMode ? '#000' : '#8B9556',
               color: isDarkMode ? '#8B9556' : '#000',
               borderColor: isDarkMode ? '#8B9556' : '#000'
             }}>
@@ -239,8 +242,8 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, on
                 <button
                   onClick={onRestart}
                   className="font-black py-3 px-8 border-2 hover:opacity-80"
-                  style={{ 
-                    backgroundColor: isDarkMode ? '#8B9556' : '#000', 
+                  style={{
+                    backgroundColor: isDarkMode ? '#8B9556' : '#000',
                     color: isDarkMode ? '#000' : '#8B9556',
                     borderColor: isDarkMode ? '#000' : '#000'
                   }}
@@ -255,8 +258,8 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, on
         {/* Game Won Overlay */}
         {gameWon && (
           <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
-            <div className="p-8 border-4 shadow-lg" style={{ 
-              backgroundColor: isDarkMode ? '#1a1a1a' : '#8B9556', 
+            <div className="p-8 border-4 shadow-lg" style={{
+              backgroundColor: isDarkMode ? '#1a1a1a' : '#8B9556',
               color: isDarkMode ? '#8B9556' : '#000',
               borderColor: isDarkMode ? '#8B9556' : '#000'
             }}>
@@ -267,8 +270,8 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, on
                 <button
                   onClick={onRestart}
                   className="font-black py-3 px-8 border-2 hover:opacity-80"
-                  style={{ 
-                    backgroundColor: isDarkMode ? '#8B9556' : '#000', 
+                  style={{
+                    backgroundColor: isDarkMode ? '#8B9556' : '#000',
                     color: isDarkMode ? '#000' : '#8B9556',
                     borderColor: isDarkMode ? '#000' : '#000'
                   }}
@@ -281,58 +284,58 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, on
         )}
       </div>
 
-        {/* Start Game Overlay */}
-        {!gameStarted && !gameOver && !gameWon && (
-          <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
-            <div className="p-8 border-4 shadow-lg" style={{ 
-              backgroundColor: isDarkMode ? '#1a1a1a' : '#8B9556', 
-              color: isDarkMode ? '#8B9556' : '#000',
-              borderColor: isDarkMode ? '#8B9556' : '#000'
-            }}>
-              <h2 className="text-3xl font-black mb-4 tracking-wider text-center">SNAKE GAME</h2>
-              <p className="text-xl font-bold mb-4 text-center">PRESS SPACE TO START</p>
-              <div className="space-y-4 text-center">
-                <div className="flex gap-2 justify-center">
-                  <button
-                    onClick={onBackToMenu}
-                    className="px-4 py-2 border-2 font-black tracking-wide hover:opacity-80"
-                    style={{ 
-                      backgroundColor: isDarkMode ? '#000' : '#000', 
-                      color: isDarkMode ? '#8B9556' : '#8B9556',
-                      borderColor: isDarkMode ? '#8B9556' : '#000'
-                    }}
-                  >
-                    ← MENU
-                  </button>
-                  <button
-                    onClick={onToggleMute}
-                    className="px-4 py-2 border-2 font-black tracking-wide hover:opacity-80"
-                    style={{ 
-                      backgroundColor: isDarkMode ? '#000' : '#000', 
-                      color: isDarkMode ? '#8B9556' : '#8B9556',
-                      borderColor: isDarkMode ? '#8B9556' : '#000'
-                    }}
-                    title={isMuted ? "Unmute" : "Mute"}
-                  >
-                    {isMuted ? "🔇" : "🔊"}
-                  </button>
-                  <button
-                    onClick={onToggleDebug}
-                    className="px-4 py-2 border-2 font-black tracking-wide hover:opacity-80"
-                    style={{ 
-                      backgroundColor: isDarkMode ? '#000' : '#000', 
-                      color: isDarkMode ? '#8B9556' : '#8B9556',
-                      borderColor: isDarkMode ? '#8B9556' : '#000'
-                    }}
-                    title="Toggle Debug Mode"
-                  >
-                    {showDebugNumbers ? "🐛" : "⚙️"}
-                  </button>
-                </div>
+      {/* Start Game Overlay */}
+      {!gameStarted && !gameOver && !gameWon && (
+        <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+          <div className="p-8 border-4 shadow-lg" style={{
+            backgroundColor: isDarkMode ? '#1a1a1a' : '#8B9556',
+            color: isDarkMode ? '#8B9556' : '#000',
+            borderColor: isDarkMode ? '#8B9556' : '#000'
+          }}>
+            <h2 className="text-3xl font-black mb-4 tracking-wider text-center">SNAKE GAME</h2>
+            <p className="text-xl font-bold mb-4 text-center">PRESS SPACE TO START</p>
+            <div className="space-y-4 text-center">
+              <div className="flex gap-2 justify-center">
+                <button
+                  onClick={onBackToMenu}
+                  className="px-4 py-2 border-2 font-black tracking-wide hover:opacity-80"
+                  style={{
+                    backgroundColor: isDarkMode ? '#000' : '#000',
+                    color: isDarkMode ? '#8B9556' : '#8B9556',
+                    borderColor: isDarkMode ? '#8B9556' : '#000'
+                  }}
+                >
+                  ← MENU
+                </button>
+                <button
+                  onClick={onToggleMute}
+                  className="px-4 py-2 border-2 font-black tracking-wide hover:opacity-80"
+                  style={{
+                    backgroundColor: isDarkMode ? '#000' : '#000',
+                    color: isDarkMode ? '#8B9556' : '#8B9556',
+                    borderColor: isDarkMode ? '#8B9556' : '#000'
+                  }}
+                  title={isMuted ? "Unmute" : "Mute"}
+                >
+                  {isMuted ? "🔇" : "🔊"}
+                </button>
+                <button
+                  onClick={onToggleDebug}
+                  className="px-4 py-2 border-2 font-black tracking-wide hover:opacity-80"
+                  style={{
+                    backgroundColor: isDarkMode ? '#000' : '#000',
+                    color: isDarkMode ? '#8B9556' : '#8B9556',
+                    borderColor: isDarkMode ? '#8B9556' : '#000'
+                  }}
+                  title="Toggle Debug Mode"
+                >
+                  {showDebugNumbers ? "🐛" : "⚙️"}
+                </button>
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
       <div className="text-center">
         {gameStarted && !gameOver && !gameWon && (
@@ -340,9 +343,9 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, on
         )}
       </div>
 
-      <div className="flex justify-between items-center mt-6 font-black border-2 p-3" style={{ 
-        width: `${Math.max(boardWidth + 8, 400)}px`, 
-        backgroundColor: isDarkMode ? '#000' : '#6B7A3D', 
+      <div className="flex justify-between items-center mt-6 font-black border-2 p-3" style={{
+        width: `${Math.max(boardWidth + 8, 400)}px`,
+        backgroundColor: isDarkMode ? '#000' : '#6B7A3D',
         color: isDarkMode ? '#8B9556' : '#000',
         borderColor: isDarkMode ? '#8B9556' : '#000'
       }}>

@@ -88,10 +88,10 @@ object JsonProtocol extends DefaultJsonProtocol:
         case JsString("gamewon")  => GameStatus.GameWon
         case _ => throw DeserializationException("Expected game status string")
 
-  implicit val gameConfigFormat: RootJsonFormat[GameConfig] = jsonFormat4(
+  implicit val gameConfigFormat: RootJsonFormat[GameConfig] = jsonFormat3(
     GameConfig.apply
   )
-  implicit val gameStateFormat: RootJsonFormat[GameState] = jsonFormat8(
+  implicit val gameStateFormat: RootJsonFormat[GameState] = jsonFormat7(
     GameState.apply
   )
 
@@ -103,16 +103,14 @@ object JsonProtocol extends DefaultJsonProtocol:
   case class GameConfigMessage(
       gridWidth: Int,
       gridHeight: Int,
-      gameSpeed: Int,
-      snakeStartSize: Int = 1
+      gameSpeed: Int
   )
   implicit val gameConfigMessageFormat: RootJsonFormat[GameConfigMessage] =
-    jsonFormat4(GameConfigMessage.apply)
+    jsonFormat3(GameConfigMessage.apply)
 
   case class GameStateResponse(
       snake: List[Position],
       food: Option[Position],
-      score: Int,
       gameOver: Boolean,
       gameWon: Boolean,
       gridWidth: Int,
@@ -121,6 +119,5 @@ object JsonProtocol extends DefaultJsonProtocol:
       connected: Boolean = true,
       stateNumber: Long
   )
-
   implicit val gameStateResponseFormat: RootJsonFormat[GameStateResponse] =
-    jsonFormat10(GameStateResponse.apply)
+    jsonFormat9(GameStateResponse.apply)

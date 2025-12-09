@@ -14,7 +14,6 @@ function App() {
   const [gameState, setGameState] = useState({
     snake: [],
     food: null,
-    score: 0,
     gameOver: false,
     gameWon: false,
     gameStarted: false,
