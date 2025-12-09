@@ -103,6 +103,30 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, on
   const boardWidth = cellSize * gridWidth
   const boardHeight = cellSize * gridHeight
 
+  // Color helpers for gradient from head (darker) to tail (lighter)
+  const hexToRgb = (hex) => {
+    const h = hex.replace('#', '')
+    const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h
+    const int = parseInt(full, 16)
+    return { r: (int >> 16) & 255, g: (int >> 8) & 255, b: int & 255 }
+  }
+
+  const rgbToHex = ({ r, g, b }) => {
+    const toHex = (v) => v.toString(16).padStart(2, '0')
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`
+  }
+
+  const lerp = (a, b, t) => Math.round(a + (b - a) * t)
+
+  const lerpColor = (hexA, hexB, t) => {
+    const A = hexToRgb(hexA)
+    const B = hexToRgb(hexB)
+    return rgbToHex({ r: lerp(A.r, B.r, t), g: lerp(A.g, B.g, t), b: lerp(A.b, B.b, t) })
+  }
+
+  const headColor = isDarkMode ? '#3b4220' : '#000000'
+  const tailColor = isDarkMode ? '#bfc98a' : '#6B7A3D'
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4" style={{
       backgroundColor: isDarkMode ? '#1a1a1a' : '#8B9556',
@@ -171,6 +195,9 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, on
         {/* Snake segments */}
         {snake.map((segment, index) => {
           const segmentPadding = Math.floor(cellSize * 0.15) // Slightly more padding for better spacing
+          // determine gradient position (0 = head, 1 = tail)
+          const t = snake && snake.length > 1 ? index / (snake.length - 1) : 0
+          const segColor = lerpColor(headColor, tailColor, t)
 
           return (
             <div
@@ -181,7 +208,8 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, on
                 top: `${segment.y * cellSize + segmentPadding}px`,
                 width: `${cellSize - (segmentPadding * 2)}px`,
                 height: `${cellSize - (segmentPadding * 2)}px`,
-                backgroundColor: isDarkMode ? '#8B9556' : '#000'
+                backgroundColor: segColor,
+                borderColor: isDarkMode ? '#6B7A3D' : '#000'
               }}
             >
               {showDebugNumbers && (
