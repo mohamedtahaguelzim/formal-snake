@@ -92,6 +92,10 @@ object GameLogic:
       withoutLastContinuous(currState.snake)
       withoutLastWithinBounds(currState.snake, currState.gridWidth, currState.gridHeight)
 
+      withoutLastIsSubseq(currState.snake)
+      ListSpecs.subseqNotContains(withoutLast(currState.snake), currState.snake, newHead)
+      withoutLastNoSelfIntersection(currState.snake)
+
       if hasWon then
         currState.copy(
           snake = newSnake,

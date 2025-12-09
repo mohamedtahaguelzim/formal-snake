@@ -16,8 +16,12 @@ def continuous(snake: List[Position]): Boolean =
     case _                     => true
 
 def withoutLast(s: List[Position]): List[Position] = s match
-  case Cons(h, t @ Cons(hh, tt)) => Cons(h, withoutLast(t))
-  case _                         => Nil()
+  case Cons(h, t @ Cons(_, _)) => Cons(h, withoutLast(t))
+  case _                       => Nil()
+
+def withoutLastIsSubseq(@induct s: List[Position]): Unit = {}.ensuring(_ =>
+  ListSpecs.subseq(withoutLast(s), s)
+)
 
 def withoutLastContinuous(@induct s: List[Position]): Unit = {
   require(continuous(s))
@@ -39,11 +43,17 @@ def withoutLastWithinBounds(
 }.ensuring(_ => withinBounds(withoutLast(s), width, height))
 
 def noSelfIntersection(snake: List[Position]): Boolean =
-  snake.unique == snake
+  ListSpecs.noDuplicate(snake)
+
+def withoutLastNoSelfIntersection(s: List[Position]): Unit = {
+  require(noSelfIntersection(s))
+  withoutLastIsSubseq(s)
+  ListSpecs.noDuplicateSubseq(withoutLast(s), s)
+}.ensuring(_ => noSelfIntersection(withoutLast(s)))
 
 def validPlayingState(s: GameState): Boolean =
   s.status == GameStatus.Playing &&
     s.snake.nonEmpty &&
     withinBounds(s.snake, s.gridWidth, s.gridHeight) &&
-    // noSelfIntersection(s.snake) &&
+    noSelfIntersection(s.snake) &&
     continuous(s.snake)
