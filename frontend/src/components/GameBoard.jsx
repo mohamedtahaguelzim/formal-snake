@@ -55,7 +55,7 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, on
 
     // Update previous state
     prevGameState.current = { score, gameOver, gameWon }
-  }, [snake, gameOver, gameWon])
+  }, [gameOver, gameWon, score])
 
   // Keyboard event listener
   useEffect(() => {
@@ -125,7 +125,7 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, on
   }
 
   const headColor = isDarkMode ? '#3b4220' : '#000000'
-  const tailColor = isDarkMode ? '#bfc98a' : '#6B7A3D'
+  const tailColor = isDarkMode ? '#bfc98a' : '#576331'
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4" style={{
