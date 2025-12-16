@@ -156,9 +156,19 @@ def withoutLastNoSelfIntersection(s: List[Position]): Unit = {
   ListSpecs.noDuplicateSubseq(withoutLast(s), s)
 }.ensuring(noSelfIntersection(withoutLast(s)))
 
+def notOppositeDirection(current: Direction, newDir: Direction): Boolean =
+  !GameLogic.isOppositeDirection(current, newDir)
+
+def pendingDirectionValid(state: GameState): Boolean =
+  state.pendingDirection match
+    case Some(dir) => 
+      state.snake.length == 1 || notOppositeDirection(state.direction, dir)
+    case None() => true
+
 def validPlayingState(s: GameState): Boolean =
   s.status == GameStatus.Playing &&
     0 < s.snake.length && s.snake.length < s.gridWidth * s.gridHeight &&
     withinBounds(s.snake, s.gridWidth, s.gridHeight) &&
     noSelfIntersection(s.snake) &&
-    continuous(s.snake)
+    continuous(s.snake) &&
+    pendingDirectionValid(s)

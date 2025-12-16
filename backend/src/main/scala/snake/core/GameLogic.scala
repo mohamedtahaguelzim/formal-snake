@@ -65,19 +65,22 @@ object GameLogic:
       state: GameState,
       newDirection: Direction
   ): GameState = {
+    require(pendingDirectionValid(state))
     val checkDirection = state.pendingDirection.getOrElse(state.direction)
     val canChangeDirection =
       state.snake.length == 1 || !isOppositeDirection(
         checkDirection,
         newDirection
       )
-    if !canChangeDirection || checkDirection == newDirection then state
+    val validNewPending = state.snake.length == 1 || !isOppositeDirection(state.direction, newDirection)
+    
+    if !canChangeDirection || !validNewPending || checkDirection == newDirection then state
     else
       state.copy(
         pendingDirection = Some(newDirection),
         stateNumber = state.stateNumber + 1
       )
-  }
+  }.ensuring(res => pendingDirectionValid(res))
 
   def withoutLast(s: List[Position]): List[Position] = s match
     case Cons(h, t @ Cons(_, _)) => Cons(h, withoutLast(t))
@@ -142,7 +145,8 @@ object GameLogic:
         initializeGame(state, foodSeed)
 
       case (GameStatus.Playing, GameInput(Some(dir), _, _, _)) =>
-        queueDirectionChange(state, dir)
+        if pendingDirectionValid(state) then queueDirectionChange(state, dir)
+        else state
 
       case (GameStatus.Playing, GameInput(_, _, true, _)) =>
         resetGame(state.config)
