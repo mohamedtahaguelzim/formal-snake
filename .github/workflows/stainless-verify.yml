@@ -20,7 +20,7 @@ jobs:
       
     - name: Upload verification results
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: stainless-results
         path: backend/stainless-stack-trace.txt
