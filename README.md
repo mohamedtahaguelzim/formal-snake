@@ -34,6 +34,15 @@ sbt compile
 sbt run
 ```
 
+### Formal Verfication (Stainless)
+
+Requirements: Stainless 0.9.9
+
+```bash
+cd backend
+stainless src/main/scala/snake/core/*
+```
+
 ### Frontend (React + Vite)
 
 Requirements: Node.js 16+
