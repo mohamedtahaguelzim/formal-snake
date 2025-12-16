@@ -1,0 +1,27 @@
+name: Stainless Verification
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Stainless
+      run: sudo snap install stainless --edge
+        
+    - name: Verify with Stainless
+      working-directory: ./backend
+      run: stainless src/main/scala/snake/core/*
+      
+    - name: Upload verification results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: stainless-results
+        path: backend/stainless-stack-trace.txt
+        if-no-files-found: ignore
