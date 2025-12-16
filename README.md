@@ -34,6 +34,9 @@ sbt compile
 sbt run
 ```
 
+See [installation instructions](https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Linux.html) for sbt setup.
+
+
 ### Formal Verfication (Stainless)
 
 Requirements: Stainless 0.9.9
@@ -42,6 +45,8 @@ Requirements: Stainless 0.9.9
 cd backend
 stainless src/main/scala/snake/core/*
 ```
+
+See [installation instructions](https://epfl-lara.github.io/stainless/installation.html) for Stainless setup.
 
 ### Frontend (React + Vite)
 
