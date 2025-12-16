@@ -1,28 +1,35 @@
 package snake.core
 
 import stainless.lang._
+import stainless.math._
 import stainless.collection._
 import stainless.annotation._
 
 object GameLogic:
-  @extern // because of until... (assert and ensuring is not verified...)
+
+  def range(size: BigInt, i: BigInt = 0): List[BigInt] = {
+    require(0 <= i && i < size)
+    decreases(size - i)
+    i :: (if i < size - 1 then range(size, i + 1) else Nil())
+  }.ensuring(_.length == size - i)
+
+  def grid(width: BigInt, height: BigInt): List[Position] = {
+    require(width > 0 && height > 0)
+    range(width * height).map(i => Position(i % width, i / width))
+  }.ensuring(_.length == width * height)
+
   def generateFood(state: GameState, seed: BigInt): Position = {
     require(validPlayingState(state))
-    val emptyPositions = (
-      for
-        x <- (BigInt(0) until state.gridWidth)
-        y <- (BigInt(0) until state.gridHeight)
-        pos = Position(x, y)
-        if !state.snake.contains(pos)
-      yield pos
-    ).toList
 
-    // this is valid since for a valid state, snake.length < width * height.
-    assert(emptyPositions.nonEmpty)
-    // this is valid since the list is non-empty and the index if valid.
-    emptyPositions((seed.abs % emptyPositions.length).toInt)
-    // this is valid since we filter out the snake positions.
-  }.ensuring(pos => !state.snake.contains(pos))
+    val emptyPositions =
+      grid(state.gridWidth, state.gridHeight).filter(!state.snake.contains(_))
+
+    gridWithoutSnakeNonEmpty(state)
+    val index = abs(seed) % emptyPositions.length
+    ListSpecs.applyForAll(emptyPositions, index, (pos: Position) => !state.snake.contains(pos))
+
+    emptyPositions(index)
+  }.ensuring(!state.snake.contains(_))
 
   def initializeGame(state: GameState, foodSeed: BigInt): GameState = {
     val withoutFood =
@@ -75,6 +82,10 @@ object GameLogic:
       )
   }
 
+  def withoutLast(s: List[Position]): List[Position] = s match
+    case Cons(h, t @ Cons(_, _)) => Cons(h, withoutLast(t))
+    case _                       => Nil()
+
   def processGameTick(state: GameState, foodSeed: BigInt): GameState = {
     require(validPlayingState(state))
     val currState = state.pendingDirection match
@@ -95,7 +106,11 @@ object GameLogic:
       val newSnake = newHead :: newTail
       val hasWon = newSnake.length == currState.gridWidth * currState.gridHeight
 
+      withoutLastLength(currState.snake)
+      assert(newSnake.length <= currState.snake.length + 1)
+
       withoutLastContinuous(currState.snake)
+
       withoutLastWithinBounds(currState.snake, currState.gridWidth, currState.gridHeight)
 
       withoutLastIsSubseq(currState.snake)

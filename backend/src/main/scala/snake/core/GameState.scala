@@ -30,8 +30,7 @@ case class GameInput(
     startGame: Boolean = false,
     resetGame: Boolean = false,
     stopGame: Boolean = false
-):
-  require(true) // change to: (direction != None xor startGame xor ...)
+)
 
 case class GameConfig(
     gridWidth: BigInt = 20,
