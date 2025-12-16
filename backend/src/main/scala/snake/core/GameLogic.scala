@@ -21,12 +21,9 @@ object GameLogic:
   def generateFood(state: GameState, seed: BigInt): Position = {
     require(validPlayingState(state))
 
-    val emptyPositions =
-      grid(state.gridWidth, state.gridHeight).filter(!state.snake.contains(_))
-
+    val emptyPositions = grid(state.gridWidth, state.gridHeight) -- state.snake
     gridWithoutSnakeNonEmpty(state)
     val index = abs(seed) % emptyPositions.length
-    ListSpecs.applyForAll(emptyPositions, index, (pos: Position) => !state.snake.contains(pos))
 
     emptyPositions(index)
   }.ensuring(!state.snake.contains(_))
