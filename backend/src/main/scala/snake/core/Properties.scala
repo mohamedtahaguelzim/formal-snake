@@ -7,6 +7,23 @@ import stainless.math._
 import stainless.collection._
 import stainless.annotation._
 
+def validPlayingState(s: GameState): Boolean =
+  s.status == GameStatus.Playing &&
+    0 < s.snake.length && s.snake.length < s.gridWidth * s.gridHeight &&
+    withinBounds(s.snake, s.gridWidth, s.gridHeight) &&
+    noSelfIntersection(s.snake) &&
+    continuous(s.snake)
+
+def withinBounds(
+    snake: List[Position],
+    width: BigInt,
+    height: BigInt
+): Boolean =
+  snake.forall(p => 0 <= p.x && p.x < width && 0 <= p.y && p.y < height)
+
+def noSelfIntersection(snake: List[Position]): Boolean =
+  ListSpecs.noDuplicate(snake)
+
 def adjacent(a: Position, b: Position): Boolean =
   (a.x == b.x && abs(a.y - b.y) == 1) ||
     (a.y == b.y && abs(a.x - b.x) == 1)
@@ -16,6 +33,7 @@ def continuous(snake: List[Position]): Boolean =
     case Cons(h1, Cons(h2, t)) => adjacent(h1, h2) && continuous(Cons(h2, t))
     case _                     => true
 
+// ========== Grid Without Snake is NonEmpty ==========
 def rangeLowerBound(size: BigInt, i: BigInt, x: BigInt): Unit = {
   require(0 <= i && i < size)
   require(range(size, i).contains(x))
@@ -116,29 +134,15 @@ def noDuplicateFilterLength[T](l1: List[T], l2: List[T]): Unit = {
 
 def gridWithoutSnakeNonEmpty(state: GameState): Unit = {
   require(validPlayingState(state))
-
   gridNoDuplicate(state.gridWidth, state.gridHeight)
   noDuplicateFilterLength(state.snake, grid(state.gridWidth, state.gridHeight))
-
 }.ensuring((grid(state.gridWidth, state.gridHeight) -- state.snake).nonEmpty)
 
+// ========== Snake Length bounds ==========
 def withoutLastLength(@induct s: List[Position]): Unit = {
 }.ensuring(s.nonEmpty ==> (s.length - 1 == withoutLast(s).length))
 
-def withoutLastIsSubseq(@induct s: List[Position]): Unit = {
-}.ensuring(ListSpecs.subseq(withoutLast(s), s))
-
-def withoutLastContinuous(@induct s: List[Position]): Unit = {
-  require(continuous(s))
-}.ensuring(continuous(withoutLast(s)))
-
-def withinBounds(
-    snake: List[Position],
-    width: BigInt,
-    height: BigInt
-): Boolean =
-  snake.forall(p => 0 <= p.x && p.x < width && 0 <= p.y && p.y < height)
-
+// ========== Snake is within grid bounds ==========
 def withoutLastWithinBounds(
     @induct s: List[Position],
     width: BigInt,
@@ -147,8 +151,14 @@ def withoutLastWithinBounds(
   require(withinBounds(s, width, height))
 }.ensuring(withinBounds(withoutLast(s), width, height))
 
-def noSelfIntersection(snake: List[Position]): Boolean =
-  ListSpecs.noDuplicate(snake)
+// ========== Snake is Continuous ==========
+def withoutLastContinuous(@induct s: List[Position]): Unit = {
+  require(continuous(s))
+}.ensuring(continuous(withoutLast(s)))
+
+// ========== Snake has no self intersections ==========
+def withoutLastIsSubseq(@induct s: List[Position]): Unit = {
+}.ensuring(ListSpecs.subseq(withoutLast(s), s))
 
 def withoutLastNoSelfIntersection(s: List[Position]): Unit = {
   require(noSelfIntersection(s))
@@ -156,9 +166,3 @@ def withoutLastNoSelfIntersection(s: List[Position]): Unit = {
   ListSpecs.noDuplicateSubseq(withoutLast(s), s)
 }.ensuring(noSelfIntersection(withoutLast(s)))
 
-def validPlayingState(s: GameState): Boolean =
-  s.status == GameStatus.Playing &&
-    0 < s.snake.length && s.snake.length < s.gridWidth * s.gridHeight &&
-    withinBounds(s.snake, s.gridWidth, s.gridHeight) &&
-    noSelfIntersection(s.snake) &&
-    continuous(s.snake)
