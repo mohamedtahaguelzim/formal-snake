@@ -12,6 +12,14 @@ import stainless.math._
 import stainless.collection._
 
 object GameLogic:
+  /** Generate a new food position inside the game's grid that does not collide with the current
+    * snake.
+    *
+    * @param state the current game state that must satisfy `validPlayingState`.
+    * @param seed a random value used to pick an index among empty cells.
+    * @return a `Position` within bounds and not contained in `state.snake`.
+    * @ensures the returned position is within the grid and is not on the snake.
+    */
   def generateFood(state: GameState, seed: BigInt): Position = {
     require(validPlayingState(state))
 
@@ -36,6 +44,14 @@ object GameLogic:
     emptyPositions(index)
   }.ensuring(!state.hasCollision(_))
 
+  /** Initialize the game to a `Playing` state. The snake of length 1 is placed in the center of the
+    * grid, and the food is generated using the provided seed.
+    *
+    * @param state the current game state (typically `Waiting`).
+    * @param foodSeed seed used to generate the food position.
+    * @return new `GameState` in `Playing` status with a single-cell snake and food.
+    * @ensuring the returned state is a `validPlayingState`.
+    */
   def initializeGame(state: GameState, foodSeed: BigInt): GameState = {
     val withoutFood =
       state.copy(
@@ -48,6 +64,12 @@ object GameLogic:
     )
   }.ensuring(validPlayingState(_))
 
+  /** Create a fresh `GameState` from a `GameConfig`.
+    * The game is set to `Waiting` with an empty snake and no food.
+    *
+    * @param config the game configuration (grid size and speed).
+    * @return a reset `GameState` ready to be initialized.
+    */
   def resetGame(config: GameConfig): GameState =
     GameState(
       snake = Nil(),
@@ -59,6 +81,14 @@ object GameLogic:
       pendingDirection = None()
     )
 
+  /** Queue a requested direction change for the next tick. The change is validated so the snake
+    * cannot reverse into itself.
+    *
+    * @param state the current `GameState`.
+    * @param newDirection the requested `Direction`.
+    * @return an updated `GameState` with `pendingDirection` set if the change is valid, otherwise
+    *         the original state.
+    */
   def queueDirectionChange(
       state: GameState,
       newDirection: Direction
@@ -73,6 +103,16 @@ object GameLogic:
         stateNumber = state.stateNumber + 1
       )
 
+  /** Advance the game by one tick while in a `Playing` state. This computes the next head position,
+    * checks for collisions, moves the snake (growing if food was eaten), handles wins, and may
+    * generate new food.
+    *
+    * @param state a `validPlayingState`.
+    * @param foodSeed seed used to generate new food if the snake eats.
+    * @return the next `GameState` after applying one tick of game logic.
+    * @ensuring the returned state is a valid transition from `state` and, if still `Playing`,
+    *           satisfies `validPlayingState`
+    */
   def processGameTick(state: GameState, foodSeed: BigInt): GameState = {
     require(validPlayingState(state))
     val currState = state.pendingDirection match
@@ -96,7 +136,7 @@ object GameLogic:
       withoutLastLength(currState.snake)
       assert(newSnake.length <= currState.snake.length + 1)
 
-      withoutLastContinuous(currState.snake)
+      withoutLastContiguous(currState.snake)
 
       withoutLastWithinBounds(currState.snake, currState.gridWidth, currState.gridHeight)
 

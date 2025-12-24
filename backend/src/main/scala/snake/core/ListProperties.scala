@@ -56,6 +56,10 @@ object ListProperties:
 
   def removeNil[T](@induct l: List[T]): Unit = {}.ensuring(l -- Nil() == l)
 
+  /** Prove that when `l2` has no duplicates and `l1` is shorter, filtering `l2` by removing
+    * `l1` leaves at least `l2.length - l1.length` elements. Used by `gridWithoutSnakeNonEmpty` to
+    * argue the set of empty positions is* non-empty.
+    */
   def noDuplicateFilterLength[T](l1: List[T], l2: List[T]): Unit = {
     require(ListSpecs.noDuplicate(l2) && l1.length < l2.length)
     l1 match

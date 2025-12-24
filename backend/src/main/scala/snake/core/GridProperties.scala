@@ -18,6 +18,8 @@ object GridProperties:
     if tail.contains(x) then rangeLowerBound(right, left + 1, x) else ()
   }.ensuring(left <= x)
 
+  /** Proof that when `x` is contained in `range(right, left)`, `left <= x < right`.
+    */
   def rangeBounds(right: BigInt, left: BigInt, x: BigInt): Unit = {
     require(left < right)
     val l = range(right, left)
@@ -35,6 +37,9 @@ object GridProperties:
       0 <= i / width && i / width < height
   )
 
+  /** Proof that mapping `range` elements to `Position`s yields only positions within bounds.
+    * Used to justify `grid` correctness.
+    */
   def rangeMappingWithinBound(
       right: BigInt,
       left: BigInt,
@@ -54,6 +59,9 @@ object GridProperties:
       .forall(p => 0 <= p.x && p.x < width && 0 <= p.y && p.y < height)
   )
 
+  /** Prove that `range` does not contain duplicate integers.
+    * Used to justify `gridNoDuplicate`.
+    */
   def rangeNoDuplicate(right: BigInt, left: BigInt): Unit = {
     require(0 <= left && left < right)
     decreases(right - left)
@@ -102,13 +110,21 @@ object GridProperties:
     ListSpecs.noDuplicate(range.map(i => Position(i % width, i / width)))
   )
 
+  /** Proof that `grid(width, height)` contains no duplicate positions.
+    *
+    * Used for the precondition of `noDuplicateFilterLength` used below.
+    */
   def gridNoDuplicate(width: BigInt, height: BigInt): Unit = {
     require(width > 0 && height > 0)
     rangeNoDuplicate(width * height, 0)
     gridInjectionNoDuplicate(range(width * height), width)
   }.ensuring(ListSpecs.noDuplicate(grid(width, height)))
 
-
+  /** Ensure that, for a valid playing state, there exists at least one empty position on the grid
+    * (i.e. the snake does not occupy the whole grid).
+    *
+    * Used in `generateFood` which needs at least one empty cell to place food.
+    */
   def gridWithoutSnakeNonEmpty(state: GameState): Unit = {
     require(validPlayingState(state))
     gridNoDuplicate(state.gridWidth, state.gridHeight)

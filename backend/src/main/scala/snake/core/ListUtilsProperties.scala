@@ -26,9 +26,9 @@ object ListUtilsProperties:
     require(allWithinBounds(s, width, height))
   }.ensuring(allWithinBounds(withoutLast(s), width, height))
 
-  def withoutLastContinuous(@induct s: List[Position]): Unit = {
-    require(continuous(s))
-  }.ensuring(continuous(withoutLast(s)))
+  def withoutLastContiguous(@induct s: List[Position]): Unit = {
+    require(contiguous(s))
+  }.ensuring(contiguous(withoutLast(s)))
 
   def withoutLastNoSelfIntersection(s: List[Position]): Unit = {
     require(noSelfIntersection(s))
