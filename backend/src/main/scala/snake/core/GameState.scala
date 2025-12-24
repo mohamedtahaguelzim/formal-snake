@@ -7,6 +7,13 @@ import stainless.annotation._
 enum Direction:
   case Up, Down, Left, Right
 
+  def opposite: Direction =
+    this match
+      case Up => Down
+      case Down => Up
+      case Left => Right
+      case Right => Left
+
 case class Position(x: BigInt, y: BigInt):
   def +(other: Direction) =
     other match
@@ -16,11 +23,7 @@ case class Position(x: BigInt, y: BigInt):
       case Direction.Right => Position(x + 1, y)
 
   def -(other: Direction) =
-    other match
-      case Direction.Up    => Position(x, y + 1)
-      case Direction.Down  => Position(x, y - 1)
-      case Direction.Left  => Position(x + 1, y)
-      case Direction.Right => Position(x - 1, y)
+    this + other.opposite
 
 enum GameStatus:
   case Waiting, Playing, GameOver, GameWon
@@ -58,8 +61,8 @@ case class GameState(
   def isValidPosition(pos: Position): Boolean =
     0 <= pos.x && pos.x < gridWidth && 0 <= pos.y && pos.y < gridHeight
 
-  def hasCollision(newHead: Position): Boolean =
-    !isValidPosition(newHead) || snake.contains(newHead)
+  def hasCollision(pos: Position): Boolean =
+    !isValidPosition(pos) || snake.contains(pos)
 
   def nextHeadPosition: Position =
     if snake.isEmpty then initialSnakePosition

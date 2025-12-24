@@ -7,26 +7,37 @@ import stainless.annotation._
 
 object GameLogic:
 
-  def range(size: BigInt, i: BigInt = 0): List[BigInt] = {
-    require(0 <= i && i < size)
-    decreases(size - i)
-    i :: (if i < size - 1 then range(size, i + 1) else Nil())
-  }.ensuring(_.length == size - i)
+  def prop(width: BigInt, height: BigInt) =
+    (p: Position) => 0 <= p.x && p.x < width && 0 <= p.y && p.y < height
+
+  def range(right: BigInt, left: BigInt = 0): List[BigInt] = {
+    require(left < right)
+    decreases(right - left)
+    left :: (if left < right - 1 then range(right, left + 1) else Nil())
+  }.ensuring(res => res.length == right - left && res.forall(_ < right))
 
   def grid(width: BigInt, height: BigInt): List[Position] = {
     require(width > 0 && height > 0)
+    rangeMappingWithinBound(width * height, 0, width, height)
     range(width * height).map(i => Position(i % width, i / width))
-  }.ensuring(_.length == width * height)
+  }.ensuring(res => res.length == width * height &&
+    res.forall(prop(width, height))
+  )
 
   def generateFood(state: GameState, seed: BigInt): Position = {
     require(validPlayingState(state))
 
-    val emptyPositions = grid(state.gridWidth, state.gridHeight) -- state.snake
+    val fullGrid = grid(state.gridWidth, state.gridHeight)
+    val emptyPositions = fullGrid -- state.snake
+    removeSubseq(state.snake, fullGrid)
+    subseqPreservesProperty(emptyPositions, fullGrid, prop(state.gridWidth, state.gridHeight))
+
     gridWithoutSnakeNonEmpty(state)
     val index = abs(seed) % emptyPositions.length
+    ListSpecs.applyForAll(emptyPositions, index, prop(state.gridWidth, state.gridHeight))
 
     emptyPositions(index)
-  }.ensuring(!state.snake.contains(_))
+  }.ensuring(!state.hasCollision(_))
 
   def initializeGame(state: GameState, foodSeed: BigInt): GameState = {
     val withoutFood =
@@ -52,14 +63,8 @@ object GameLogic:
     )
   }
 
-  def isOppositeDirection(current: Direction, newDir: Direction): Boolean = {
-    (current, newDir) match
-      case (Direction.Up, Direction.Down)    => true
-      case (Direction.Down, Direction.Up)    => true
-      case (Direction.Left, Direction.Right) => true
-      case (Direction.Right, Direction.Left) => true
-      case _                                 => false
-  }
+  def isOppositeDirection(current: Direction, newDir: Direction): Boolean =
+    current.opposite == newDir
 
   def queueDirectionChange(
       state: GameState,
@@ -108,10 +113,18 @@ object GameLogic:
 
       withoutLastContinuous(currState.snake)
 
-      withoutLastWithinBounds(currState.snake, currState.gridWidth, currState.gridHeight)
+      withoutLastWithinBounds(
+        currState.snake,
+        currState.gridWidth,
+        currState.gridHeight
+      )
 
       withoutLastIsSubseq(currState.snake)
-      ListSpecs.subseqNotContains(withoutLast(currState.snake), currState.snake, newHead)
+      ListSpecs.subseqNotContains(
+        withoutLast(currState.snake),
+        currState.snake,
+        newHead
+      )
       withoutLastNoSelfIntersection(currState.snake)
 
       if hasWon then
