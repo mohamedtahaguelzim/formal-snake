@@ -1,17 +1,18 @@
 package snake.core
 
+import snake.core.Grid._
+
 import stainless.lang._
 import stainless.collection._
-import stainless.annotation._
 
 enum Direction:
   case Up, Down, Left, Right
 
   def opposite: Direction =
     this match
-      case Up => Down
-      case Down => Up
-      case Left => Right
+      case Up    => Down
+      case Down  => Up
+      case Left  => Right
       case Right => Left
 
 case class Position(x: BigInt, y: BigInt):
@@ -56,13 +57,10 @@ case class GameState(
 
   def initialSnakePosition: Position = {
     Position(gridWidth / 2, gridHeight / 2)
-  }.ensuring(isValidPosition(_))
-
-  def isValidPosition(pos: Position): Boolean =
-    0 <= pos.x && pos.x < gridWidth && 0 <= pos.y && pos.y < gridHeight
+  }.ensuring(isWithinBounds(gridWidth, gridHeight)(_))
 
   def hasCollision(pos: Position): Boolean =
-    !isValidPosition(pos) || snake.contains(pos)
+    !isWithinBounds(gridWidth, gridHeight)(pos) || snake.contains(pos)
 
   def nextHeadPosition: Position =
     if snake.isEmpty then initialSnakePosition

@@ -7,8 +7,8 @@ function GameBoard({ gameState, onKeyPress, onBackToMenu, onRestart, isMuted, on
     food = null,
     gameOver = false,
     gameWon = false,
-    gridWidth = 20,
-    gridHeight = 20,
+    gridWidth = 6,
+    gridHeight = 4,
     gameStarted = false,
     showDebugNumbers = false,
   } = gameState

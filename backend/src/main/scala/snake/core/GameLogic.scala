@@ -1,40 +1,37 @@
 package snake.core
 
+import snake.core.Grid._
+import snake.core.GridProperties._
+import snake.core.ListProperties._
+import snake.core.ListUtils._
+import snake.core.ListUtilsProperties._
+import snake.core.Properties._
+
 import stainless.lang._
 import stainless.math._
 import stainless.collection._
-import stainless.annotation._
 
 object GameLogic:
-
-  def prop(width: BigInt, height: BigInt) =
-    (p: Position) => 0 <= p.x && p.x < width && 0 <= p.y && p.y < height
-
-  def range(right: BigInt, left: BigInt = 0): List[BigInt] = {
-    require(left < right)
-    decreases(right - left)
-    left :: (if left < right - 1 then range(right, left + 1) else Nil())
-  }.ensuring(res => res.length == right - left && res.forall(_ < right))
-
-  def grid(width: BigInt, height: BigInt): List[Position] = {
-    require(width > 0 && height > 0)
-    rangeMappingWithinBound(width * height, 0, width, height)
-    range(width * height).map(i => Position(i % width, i / width))
-  }.ensuring(res => res.length == width * height &&
-    res.forall(prop(width, height))
-  )
-
   def generateFood(state: GameState, seed: BigInt): Position = {
     require(validPlayingState(state))
 
     val fullGrid = grid(state.gridWidth, state.gridHeight)
     val emptyPositions = fullGrid -- state.snake
-    removeSubseq(state.snake, fullGrid)
-    subseqPreservesProperty(emptyPositions, fullGrid, prop(state.gridWidth, state.gridHeight))
 
+    removeSubseq(state.snake, fullGrid)
+    subseqPreservesProperty(
+      emptyPositions,
+      fullGrid,
+      isWithinBounds(state.gridWidth, state.gridHeight)
+    )
     gridWithoutSnakeNonEmpty(state)
+
     val index = abs(seed) % emptyPositions.length
-    ListSpecs.applyForAll(emptyPositions, index, prop(state.gridWidth, state.gridHeight))
+    ListSpecs.applyForAll(
+      emptyPositions,
+      index,
+      isWithinBounds(state.gridWidth, state.gridHeight)
+    )
 
     emptyPositions(index)
   }.ensuring(!state.hasCollision(_))
@@ -51,7 +48,7 @@ object GameLogic:
     )
   }.ensuring(validPlayingState(_))
 
-  def resetGame(config: GameConfig): GameState = {
+  def resetGame(config: GameConfig): GameState =
     GameState(
       snake = Nil(),
       food = None(),
@@ -61,32 +58,20 @@ object GameLogic:
       stateNumber = 0,
       pendingDirection = None()
     )
-  }
-
-  def isOppositeDirection(current: Direction, newDir: Direction): Boolean =
-    current.opposite == newDir
 
   def queueDirectionChange(
       state: GameState,
       newDirection: Direction
-  ): GameState = {
+  ): GameState =
     val checkDirection = state.pendingDirection.getOrElse(state.direction)
     val canChangeDirection =
-      state.snake.length == 1 || !isOppositeDirection(
-        checkDirection,
-        newDirection
-      )
+      state.snake.length == 1 || checkDirection != newDirection.opposite
     if !canChangeDirection || checkDirection == newDirection then state
     else
       state.copy(
         pendingDirection = Some(newDirection),
         stateNumber = state.stateNumber + 1
       )
-  }
-
-  def withoutLast(s: List[Position]): List[Position] = s match
-    case Cons(h, t @ Cons(_, _)) => Cons(h, withoutLast(t))
-    case _                       => Nil()
 
   def processGameTick(state: GameState, foodSeed: BigInt): GameState = {
     require(validPlayingState(state))
@@ -135,7 +120,10 @@ object GameLogic:
             else Some(generateFood(currState.copy(snake = newSnake), foodSeed)),
           stateNumber = currState.stateNumber + 1
         )
-  }.ensuring(res => res.status == GameStatus.Playing ==> validPlayingState(res) && validTransistion(state, res))
+  }.ensuring(next =>
+    validTransistion(state, next) &&
+      next.status == GameStatus.Playing ==> validPlayingState(next)
+  )
 
   def transition(
       state: GameState,

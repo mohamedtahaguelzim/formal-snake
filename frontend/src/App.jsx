@@ -17,8 +17,8 @@ function App() {
     gameOver: false,
     gameWon: false,
     gameStarted: false,
-    gridWidth: 20,
-    gridHeight: 20,
+    gridWidth: 6,
+    gridHeight: 4,
     connected: false
   })
 

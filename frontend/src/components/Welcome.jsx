@@ -3,11 +3,11 @@ import { useState, useEffect } from 'react'
 function Welcome({ onStartGame, connected, isDarkMode, setIsDarkMode }) {
   const [gridWidth, setGridWidth] = useState(() => {
     const saved = localStorage.getItem('snakeGameWidth')
-    return saved ? parseInt(saved) : 20
+    return saved ? parseInt(saved) : 6
   })
   const [gridHeight, setGridHeight] = useState(() => {
     const saved = localStorage.getItem('snakeGameHeight')
-    return saved ? parseInt(saved) : 20
+    return saved ? parseInt(saved) : 4
   })
   const [gameSpeed, setGameSpeed] = useState(() => {
     const saved = localStorage.getItem('snakeGameSpeed')
@@ -15,7 +15,7 @@ function Welcome({ onStartGame, connected, isDarkMode, setIsDarkMode }) {
   })
   const [isTurnBased, setIsTurnBased] = useState(() => {
     const saved = localStorage.getItem('snakeIsTurnBased')
-    return saved ? saved === 'true' : false
+    return saved ? saved === 'true' : true
   })
 
   // Save config to localStorage when changed
