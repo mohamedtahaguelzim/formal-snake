@@ -113,18 +113,11 @@ object GameLogic:
 
       withoutLastContinuous(currState.snake)
 
-      withoutLastWithinBounds(
-        currState.snake,
-        currState.gridWidth,
-        currState.gridHeight
-      )
+      withoutLastWithinBounds(currState.snake, currState.gridWidth, currState.gridHeight)
 
+      subseqOfSelf(currState.snake)
       withoutLastIsSubseq(currState.snake)
-      ListSpecs.subseqNotContains(
-        withoutLast(currState.snake),
-        currState.snake,
-        newHead
-      )
+      ListSpecs.subseqNotContains(withoutLast(currState.snake), currState.snake, newHead)
       withoutLastNoSelfIntersection(currState.snake)
 
       if hasWon then
@@ -142,7 +135,7 @@ object GameLogic:
             else Some(generateFood(currState.copy(snake = newSnake), foodSeed)),
           stateNumber = currState.stateNumber + 1
         )
-  }.ensuring(res => res.status == GameStatus.Playing ==> validPlayingState(res))
+  }.ensuring(res => res.status == GameStatus.Playing ==> validPlayingState(res) && validTransistion(state, res))
 
   def transition(
       state: GameState,

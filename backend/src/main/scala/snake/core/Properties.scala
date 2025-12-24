@@ -7,6 +7,14 @@ import stainless.math._
 import stainless.collection._
 import stainless.annotation._
 
+def validTransistion(prev: GameState, next: GameState): Boolean =
+  require(validPlayingState(prev))
+  prev.snake.length <= next.snake.length &&
+    next.snake.length <= prev.snake.length + 1 &&
+    (next.status == GameStatus.GameWon) ==> (next.snake.length == next.gridWidth * next.gridHeight) &&
+    (next.snake.length == next.gridWidth * next.gridHeight) ==> (next.status == GameStatus.GameWon) &&
+    next.status != GameStatus.GameOver ==> ListSpecs.subseq(next.snake.tail, prev.snake)
+
 def validPlayingState(s: GameState): Boolean =
   s.status == GameStatus.Playing &&
     0 < s.snake.length && s.snake.length < s.gridWidth * s.gridHeight &&
@@ -214,6 +222,9 @@ def withoutLastContinuous(@induct s: List[Position]): Unit = {
 }.ensuring(continuous(withoutLast(s)))
 
 // ========== Snake has no self intersections ==========
+def subseqOfSelf[T](@induct s: List[T]): Unit = {
+}.ensuring(ListSpecs.subseq(s, s))
+
 def withoutLastIsSubseq(@induct s: List[Position]): Unit = {
 }.ensuring(ListSpecs.subseq(withoutLast(s), s))
 
