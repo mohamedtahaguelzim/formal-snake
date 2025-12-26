@@ -1,0 +1,160 @@
+\documentclass[letterpaper, 11pt]{article}
+\usepackage{style}
+\usepackage{tgpagella}
+% \setlength{\parindent}{0pt}
+
+\title{Formal Verification of the Snake Game as a State Machine}
+\author{
+  Clément Yves Pierre Tsedri \\
+      \texttt{\href{mailto:clement.tsedri@epfl.ch}{clement.tsedri@epfl.ch}} \and
+  Mohamed Taha Guelzim \\
+      \texttt{\href{mailto:mohamed.guelzim@epfl.ch}{mohamed.guelzim@epfl.ch}} \and
+  Ozair Faizan \\
+      \texttt{\href{mailto:ahmad.faizan@epfl.ch}{ahmad.faizan@epfl.ch}}
+}
+\date{}
+
+\begin{document}
+\maketitle
+\setlength{\belowdisplayskip}{4pt} \setlength{\belowdisplayshortskip}{4pt}
+\setlength{\abovedisplayskip}{4pt} \setlength{\abovedisplayshortskip}{4pt}
+
+
+\abstract{
+    The Snake game, while considered trivial software, present complex environment and state spaces
+    which makes it an excellent candidate for formal verification case study.
+    In this project, we formalize the Snake game as a state machine and verify the correctness of
+    its game logic using Stainless, a verification framework for Scala.
+    We define a set of invariants describing a valid playging game state and prove that the game's
+    transition function preserves these invariants along with correct transitions to terminal states
+    (Game Over or Game Won).
+}
+
+
+\section{Introduction}
+Formal verification is often associated with safety-critical systems, however, applying these
+methods to game development offers a unique pedagogical opportunity to study state-based reasoning
+and invariant preservation in a system with immediate visual feedback and intuitive rules. 
+
+The Snake game involves a player-controlled snake moving on a grid, growing as it consumes food, and
+dying if it collides with walls or itself. While traditionally a real-time game, our implementation
+focuses on a turn-based version, meaning the game state updates only when the player provides input
+(although the game is playable in real-time too).
+
+Despite its apparent simplicity, the state space is vast, making exhaustive testing impossible.
+In this project, we aim to verify that our implementation of Snake never enters an undefined or
+illegal state during execution. We model the game in Scala using immutable data structures and use
+the Stainless framework to prove inductive invariants (safety properties).
+
+
+\section{Model and Game Logic}
+The game is modeled as a finite state machine, the state is captured by
+\begin{minted}{scala}
+    case class GameState(
+        snake: List[Position],
+        food: Option[Position],
+        direction: Direction,
+        status: GameStatus,
+        config: GameConfig,
+        stateNumber: BigInt,
+        pendingDirection: Option[Direction]
+    )
+\end{minted}
+where \texttt{status} tracks the high-level state described in Figure~\ref{fig:status}.
+The core verification focuses on the \mintinline{scala}{Playing} status, where the logic is
+non-trivial.
+
+The function \mintinline{scala}{def processGameTick(state: GameState, foodSeed: BigInt): GameState}
+advances the game by one tick while in a \mintinline{scala}{Playing} status.
+It computes the next head position, checks for collisions, moves the snake, handles wins, and may
+generate new food. The snake movement is handled as follows, if food was eaten then the new snake is
+\mintinline{scala}{nextHead :: oldSnake} otherwise it is \mintinline{scala}{nextHead ::
+withoutLast(oldSnake)} where \texttt{withoutLast} removes the last element of the list.
+
+The function \mintinline{scala}{def generateFood(state: GameState, seed: BigInt): Position} outputs
+a grid position where the food will be place such that it is not occupied by the snake. It uses
+\texttt{seed} which is a pseudo-random number.
+
+The verification of the above two function is the core of our project.
+
+\begin{figure}[ht]
+    \centering
+    \begin{tikzpicture}[
+        ->,
+        >=stealth,
+        node distance=2.8cm,
+        state/.style={circle, draw, minimum size=1.2cm, font=\small},
+        initial/.style={state, fill=gray!20}
+    ]
+
+    \node[initial] (waiting) {Waiting};
+    \node[state] (playing) [right=of waiting] {Playing};
+    \node[state] (gameover) [below right=1.5cm and 1cm of playing] {GameOver};
+    \node[state] (gamewon) [above right=1.5cm and 1cm of playing] {GameWon};
+
+    \path
+        (waiting) edge node[above, font=\tiny] {startGame} (playing)
+        (playing) edge[loop above] node[above, font=\tiny] {tick} (playing)
+        (playing) edge node[below left, font=\tiny] {collision} (gameover)
+        (playing) edge node[above left, font=\tiny] {win} (gamewon)
+        (gameover) edge[bend left=35] node[below, font=\tiny] {reset} (waiting)
+        (gamewon) edge[bend right=35] node[above, font=\tiny] {reset} (waiting);
+
+    \node[draw, rectangle, dashed, align=left, font=\tiny, right=0.2cm of playing] {
+      \textbf{validPlayingState}
+      };
+    \end{tikzpicture}
+    \caption{High-level state diagram of the game.}
+    \label{fig:status}
+\end{figure}
+
+
+\section{Specifications and Invariants}
+We require that every state in \mintinline{scala}{Playing} status satisfies
+\begin{minted}{scala}
+  def validPlayingState(state: GameState): Boolean =
+    state.status == GameStatus.Playing &&
+      0 < state.snake.length &&
+      state.snake.length < state.gridWidth * state.gridHeight &&
+      allWithinBounds(state.snake, state.gridWidth, state.gridHeight) &&
+      noSelfIntersection(state.snake) &&
+      contiguous(state.snake)
+\end{minted}
+which serves as the central invariant.
+It states that the snake length is strictly positive and less that the total grid size $(W \times
+H)$, all snake positions are within the grid boundaries, the snake has no duplicate positions and
+each segment of the snake is adjacent to the next segment.
+
+Furthermore, we require \mintinline{scala}{processGameTick} to satisfies
+\mintinline{scala}{validTransistion} which describes valid transitions, that is,
+\begin{itemize}
+    \item The snake length never decreases and grows by at most one
+    \item Reaching \mintinline{scala}{GameOver} is equivalent to \texttt{nextHead} colliding with
+        the walls or with the snake
+    \item Reaching \mintinline{scala}{GameWon} is equivalent to the snake filling the grid
+    \item The tail of the new snake must be a subsequence of the previous snake
+        (movement preserves body).
+\end{itemize}
+
+For a \mintinline{scala}{Playing} state, the \mintinline{scala}{generateFood} function can always
+return a valid position to place the food since the length of the snake is strictly less than the
+size of the grid, however, as we will see, the proof of this statement is non-trivial.
+
+
+\section{Verification of Game Logic}
+\subsection{Initial Playing State is Valid}
+
+\subsection{Preservation of Invariants}
+
+\subsection{Transition Safety}
+
+\subsection{Food Generation Safety}
+
+
+\section{Results and Metrics}
+
+
+\section{Conclusion}
+
+
+\end{document}

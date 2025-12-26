@@ -62,7 +62,7 @@ object GameLogic:
     withoutFood.copy(
       food = Some(generateFood(withoutFood, foodSeed))
     )
-  }.ensuring(validPlayingState(_))
+  }.ensuring(validPlayingState)
 
   /** Create a fresh `GameState` from a `GameConfig`.
     * The game is set to `Waiting` with an empty snake and no food.
@@ -109,6 +109,9 @@ object GameLogic:
     require(validPlayingState(state))
     val currState = updateDirection(state)
 
+    subseqOfSelf(currState.snake)
+    ListSpecs.subseqTail(currState.snake, currState.snake)
+
     val newHead = currState.nextHeadPosition
     if state.hasCollision(newHead) then
       currState.copy(
@@ -129,7 +132,6 @@ object GameLogic:
 
       withoutLastWithinBounds(currState.snake, currState.gridWidth, currState.gridHeight)
 
-      subseqOfSelf(currState.snake)
       withoutLastIsSubseq(currState.snake)
       ListSpecs.subseqNotContains(withoutLast(currState.snake), currState.snake, newHead)
       withoutLastNoSelfIntersection(currState.snake)

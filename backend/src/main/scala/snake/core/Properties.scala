@@ -37,7 +37,7 @@ object Properties:
         (a.y == b.y && abs(a.x - b.x) == 1)
 
     snake match
-      case Cons(h1, Cons(h2, t)) => adjacent(h1, h2) && contiguous(Cons(h2, t))
+      case Cons(h1, t @ Cons(h2, _)) => adjacent(h1, h2) && contiguous(t)
       case _                     => true
 
   /** Predicate describing admissible transitions from a valid playing state:
@@ -45,7 +45,7 @@ object Properties:
     *   - snake length grows by at most one
     *   - reaching `GameOver` is equivalent to `nextHeadPosition` having a collision
     *   - reaching `GameWon` is equivalent to filling the grid
-    *   - unless the game is `GameOver`, the new snake (minus head) must be a subsequence of the
+    *   - the new snake (minus head) must be a subsequence of the
     *     previous snake (movement preserves body)
     */
   def validTransistion(curr: GameState, next: GameState): Boolean =
@@ -53,7 +53,7 @@ object Properties:
 
     val snakeUpdate =
       curr.snake.length <= next.snake.length && next.snake.length <= curr.snake.length + 1 &&
-        next.status != GameStatus.GameOver ==> ListSpecs.subseq(next.snake.tail, curr.snake)
+        ListSpecs.subseq(next.snake.tail, curr.snake)
     val gameOverCondition = 
       val newCurr = updateDirection(curr)
       (next.status == GameStatus.GameOver) ==> newCurr.hasCollision(newCurr.nextHeadPosition) &&
