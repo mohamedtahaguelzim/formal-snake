@@ -25,7 +25,7 @@
     which makes it an excellent candidate for formal verification case study.
     In this project, we formalize the Snake game as a state machine and verify the correctness of
     its game logic using Stainless, a verification framework for Scala.
-    We define a set of invariants describing a valid playging game state and prove that the game's
+    We define a set of invariants describing a valid playing game state and prove that the game's
     transition function preserves these invariants along with correct transitions to terminal states
     (Game Over or Game Won).
 }
@@ -40,9 +40,9 @@ The Snake game involves a player-controlled snake moving on a grid, growing as i
 dying if it collides with walls or itself. While traditionally a real-time game, our implementation
 focuses on a turn-based version, meaning the game state updates only when the player provides input
 (although the game is playable in real-time too).
-
 Despite its apparent simplicity, the state space is vast, making exhaustive testing impossible.
-In this project, we aim to verify that our implementation of Snake never enters an undefined or
+
+In this project, our aim is to verify that our implementation of Snake never enters an undefined or
 illegal state during execution. We model the game in Scala using immutable data structures and use
 the Stainless framework to prove inductive invariants (safety properties).
 
@@ -67,15 +67,15 @@ non-trivial.
 The function \mintinline{scala}{def processGameTick(state: GameState, foodSeed: BigInt): GameState}
 advances the game by one tick while in a \mintinline{scala}{Playing} status.
 It computes the next head position, checks for collisions, moves the snake, handles wins, and may
-generate new food. The snake movement is handled as follows, if food was eaten then the new snake is
+generate new food. The snake movement is handled as follows, if food was eaten, then the new snake is
 \mintinline{scala}{nextHead :: oldSnake} otherwise it is \mintinline{scala}{nextHead ::
 withoutLast(oldSnake)} where \texttt{withoutLast} removes the last element of the list.
 
 The function \mintinline{scala}{def generateFood(state: GameState, seed: BigInt): Position} outputs
-a grid position where the food will be place such that it is not occupied by the snake. It uses
+a grid position where the food will be placed such that it is not occupied by the snake. It uses
 \texttt{seed} which is a pseudo-random number.
 
-The verification of the above two function is the core of our project.
+Verification of the above two functions is the core of our project.
 
 \begin{figure}[ht]
     \centering
@@ -116,16 +116,18 @@ We require that every state in \mintinline{scala}{Playing} status satisfies
     state.status == GameStatus.Playing &&
       0 < state.snake.length &&
       state.snake.length < state.gridWidth * state.gridHeight &&
+      ((state.pendingDirection.isDefined && state.snake.length > 1)
+          ==> (state.direction != state.pendingDirection.get.opposite)) && 
       allWithinBounds(state.snake, state.gridWidth, state.gridHeight) &&
       noSelfIntersection(state.snake) &&
       contiguous(state.snake)
 \end{minted}
 which serves as the central invariant.
-It states that the snake length is strictly positive and less that the total grid size $(W \times
-H)$, all snake positions are within the grid boundaries, the snake has no duplicate positions and
-each segment of the snake is adjacent to the next segment.
+It says that the snake length is strictly positive and less that the total grid size $(W \times
+H)$, the pending direction is valid, all snake positions are within the grid boundaries, the
+snake has no duplicate positions and each segment of the snake is adjacent to the next segment.
 
-Furthermore, we require \mintinline{scala}{processGameTick} to satisfies
+Furthermore, we require \mintinline{scala}{processGameTick} to satisfy
 \mintinline{scala}{validTransistion} which describes valid transitions, that is,
 \begin{itemize}
     \item The snake length never decreases and grows by at most one
@@ -138,7 +140,7 @@ Furthermore, we require \mintinline{scala}{processGameTick} to satisfies
 
 For a \mintinline{scala}{Playing} state, the \mintinline{scala}{generateFood} function can always
 return a valid position to place the food since the length of the snake is strictly less than the
-size of the grid, however, as we will see, the proof of this statement is non-trivial.
+size of the grid; however, as we will see, the proof of this statement is non-trivial.
 
 
 \section{Verification of Game Logic}
@@ -158,3 +160,4 @@ size of the grid, however, as we will see, the proof of this statement is non-tr
 
 
 \end{document}
+

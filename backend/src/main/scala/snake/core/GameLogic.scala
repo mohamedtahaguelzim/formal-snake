@@ -57,7 +57,8 @@ object GameLogic:
       state.copy(
         status = GameStatus.Playing,
         snake = List(state.initialSnakePosition),
-        stateNumber = state.stateNumber + 1
+        stateNumber = state.stateNumber + 1,
+        pendingDirection = None()
       )
     withoutFood.copy(
       food = Some(generateFood(withoutFood, foodSeed))
@@ -80,14 +81,10 @@ object GameLogic:
     * @return an updated `GameState` with `pendingDirection` set if the change is valid, otherwise
     *         the original state.
     */
-  def queueDirectionChange(
-      state: GameState,
-      newDirection: Direction
-  ): GameState =
-    val checkDirection = state.pendingDirection.getOrElse(state.direction)
+  def queueDirectionChange(state: GameState, newDirection: Direction): GameState =
     val canChangeDirection =
-      state.snake.length == 1 || checkDirection != newDirection.opposite
-    if !canChangeDirection || checkDirection == newDirection then state
+      state.snake.length == 1 || state.direction != newDirection.opposite
+    if !canChangeDirection then state
     else state.copy(pendingDirection = Some(newDirection))
 
   def updateDirection(state: GameState): GameState =

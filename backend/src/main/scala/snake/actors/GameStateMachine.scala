@@ -63,7 +63,7 @@ object GameStateMachine:
           val updatedState = GameLogic.transition(state, input)
           
           // If turn-based mode (gameSpeed = 0), process tick immediately on input
-          if state.config.gameSpeed == 0 then
+          if state.config.gameSpeed == 0 && updatedState.pendingDirection.isDefined then
             val newState = GameLogic.tickGame(updatedState, BigInt(scala.util.Random.nextInt()))
             if newState.status == GameStatus.GameOver then
               val finalScore = ((newState.snake.length - 1) * 10).toInt
