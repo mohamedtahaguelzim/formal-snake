@@ -18,17 +18,6 @@ object GridProperties:
     if tail.contains(x) then rangeLowerBound(right, left + 1, x) else ()
   }.ensuring(left <= x)
 
-  /** Proof that when `x` is contained in `range(right, left)`, `left <= x < right`.
-    */
-  def rangeBounds(right: BigInt, left: BigInt, x: BigInt): Unit = {
-    require(left < right)
-    val l = range(right, left)
-    require(l.contains(x))
-    indexOfCorrectness(l, x)
-    ListSpecs.applyForAll(l, l.indexOf(x), _ < right)
-    rangeLowerBound(right, left, x)
-  }.ensuring(left <= x && x < right)
-
   def mappingBounds(width: BigInt, height: BigInt, i: BigInt): Unit = {
     require(width > 0 && height > 0)
     require(0 <= i && i < width * height)

@@ -5,20 +5,11 @@ import stainless.collection._
 import stainless.annotation._
 
 object ListProperties:
-  def indexOfCorrectness[T](l: List[T], x: T): Unit = {
-    require(l.contains(x))
-    l match
-      case Cons(h, t) if h != x => indexOfCorrectness(t, x)
-      case _                    => ()
-  }.ensuring(l(l.indexOf(x)) == x)
+  def subseqOfSelf[T](@induct s: List[T]): Unit = {
+  }.ensuring(ListSpecs.subseq(s, s))
 
-  def subseqOfSelf[T](@induct s: List[T]): Unit = {}.ensuring(
-    ListSpecs.subseq(s, s)
-  )
-
-  def removeSubseq[T](l1: List[T], @induct l2: List[T]): Unit = {}.ensuring(
-    ListSpecs.subseq(l2 -- l1, l2)
-  )
+  def removeSubseq[T](l1: List[T], @induct l2: List[T]): Unit = {
+  }.ensuring(ListSpecs.subseq(l2 -- l1, l2))
 
   def subseqPreservesProperty[T](
       l1: List[T],

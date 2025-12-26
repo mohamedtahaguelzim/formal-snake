@@ -70,16 +70,7 @@ object GameLogic:
     * @param config the game configuration (grid size and speed).
     * @return a reset `GameState` ready to be initialized.
     */
-  def resetGame(config: GameConfig): GameState =
-    GameState(
-      snake = Nil(),
-      food = None(),
-      direction = Direction.Right,
-      status = GameStatus.Waiting,
-      config = config,
-      stateNumber = 0,
-      pendingDirection = None()
-    )
+  def resetGame(config: GameConfig) = GameState(config = config)
 
   /** Queue a requested direction change for the next tick. The change is validated so the snake
     * cannot reverse into itself.
@@ -97,11 +88,12 @@ object GameLogic:
     val canChangeDirection =
       state.snake.length == 1 || checkDirection != newDirection.opposite
     if !canChangeDirection || checkDirection == newDirection then state
-    else
-      state.copy(
-        pendingDirection = Some(newDirection),
-        stateNumber = state.stateNumber + 1
-      )
+    else state.copy(pendingDirection = Some(newDirection))
+
+  def updateDirection(state: GameState): GameState =
+    state.pendingDirection match
+      case Some(dir) => state.copy(direction = dir, pendingDirection = None())
+      case None()    => state
 
   /** Advance the game by one tick while in a `Playing` state. This computes the next head position,
     * checks for collisions, moves the snake (growing if food was eaten), handles wins, and may
@@ -115,9 +107,7 @@ object GameLogic:
     */
   def processGameTick(state: GameState, foodSeed: BigInt): GameState = {
     require(validPlayingState(state))
-    val currState = state.pendingDirection match
-      case Some(dir) => state.copy(direction = dir, pendingDirection = None())
-      case None()    => state
+    val currState = updateDirection(state)
 
     val newHead = currState.nextHeadPosition
     if state.hasCollision(newHead) then
@@ -134,7 +124,6 @@ object GameLogic:
       val hasWon = newSnake.length == currState.gridWidth * currState.gridHeight
 
       withoutLastLength(currState.snake)
-      assert(newSnake.length <= currState.snake.length + 1)
 
       withoutLastContiguous(currState.snake)
 

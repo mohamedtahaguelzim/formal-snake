@@ -10,13 +10,11 @@ import stainless.collection._
 import stainless.annotation._
 
 object ListUtilsProperties:
-  def withoutLastLength[T](@induct s: List[T]): Unit = {}.ensuring(
-    s.nonEmpty ==> (s.length - 1 == withoutLast(s).length)
-  )
+  def withoutLastLength[T](@induct s: List[T]): Unit = {
+  }.ensuring(s.nonEmpty ==> (s.length - 1 == withoutLast(s).length))
 
-  def withoutLastIsSubseq[T](@induct s: List[T]): Unit = {}.ensuring(
-    ListSpecs.subseq(withoutLast(s), s)
-  )
+  def withoutLastIsSubseq[T](@induct s: List[T]): Unit = {
+  }.ensuring(ListSpecs.subseq(withoutLast(s), s))
 
   def withoutLastWithinBounds(
       @induct s: List[Position],

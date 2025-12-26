@@ -37,8 +37,8 @@ case class GameInput(
 )
 
 case class GameConfig(
-    gridWidth: BigInt = 20,
-    gridHeight: BigInt = 20,
+    gridWidth: BigInt = 6,
+    gridHeight: BigInt = 4,
     gameSpeed: BigInt = 200
 ):
   require(gridWidth >= 3 && gridHeight >= 3 && gameSpeed >= 0)
@@ -63,5 +63,5 @@ case class GameState(
     !isWithinBounds(gridWidth, gridHeight)(pos) || snake.contains(pos)
 
   def nextHeadPosition: Position =
-    if snake.isEmpty then initialSnakePosition
-    else snake.head + direction
+    require(snake.nonEmpty)
+    snake.head + direction
