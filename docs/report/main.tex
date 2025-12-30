@@ -28,11 +28,14 @@
     We define a set of invariants describing a valid playing game state and prove that the game's
     transition function preserves these invariants along with correct transitions to terminal states
     (Game Over or Game Won).
+
+    We used the paper \cite{games-using-fm}, which formalizes simple games such as Pac-Man and Chess
+    in ProB, as inspiration for our formalization.
 }
 
 
 \section{Introduction}
-Formal verification is often associated with safety-critical systems, however, applying these
+Formal verification is often associated with safety-critical systems; however, applying these
 methods to game development offers a unique pedagogical opportunity to study state-based reasoning
 and invariant preservation in a system with immediate visual feedback and intuitive rules. 
 
@@ -48,7 +51,8 @@ the Stainless framework to prove inductive invariants (safety properties).
 
 
 \section{Model and Game Logic}
-The game is modeled as a finite state machine, the state is captured by
+The game is implemented as a finite state machine available on 
+\href{https://github.com/mohamedtahaguelzim/formal-snake}{Github}, the state is captured by
 \begin{minted}{scala}
     case class GameState(
         snake: List[Position],
@@ -67,8 +71,8 @@ non-trivial.
 The function \mintinline{scala}{def processGameTick(state: GameState, foodSeed: BigInt): GameState}
 advances the game by one tick while in a \mintinline{scala}{Playing} status.
 It computes the next head position, checks for collisions, moves the snake, handles wins, and may
-generate new food. The snake movement is handled as follows, if food was eaten, then the new snake is
-\mintinline{scala}{nextHead :: oldSnake} otherwise it is \mintinline{scala}{nextHead ::
+generate new food. The snake movement is handled as follows: if food was eaten, then the new snake is
+\mintinline{scala}{nextHead :: oldSnake}; otherwise it is \mintinline{scala}{nextHead ::
 withoutLast(oldSnake)} where \texttt{withoutLast} removes the last element of the list.
 
 The function \mintinline{scala}{def generateFood(state: GameState, seed: BigInt): Position} outputs
@@ -93,7 +97,8 @@ Verification of the above two functions is the core of our project.
     \node[state] (gamewon) [above right=1.5cm and 1cm of playing] {GameWon};
 
     \path
-        (waiting) edge node[above, font=\tiny] {startGame} (playing)
+        (waiting) edge[bend right=25] node[above, font=\tiny] {startGame} (playing)
+        (playing) edge[bend right=25] node[above, font=\tiny] {reset} (waiting)
         (playing) edge[loop above] node[above, font=\tiny] {tick} (playing)
         (playing) edge node[below left, font=\tiny] {collision} (gameover)
         (playing) edge node[above left, font=\tiny] {win} (gamewon)
@@ -116,48 +121,187 @@ We require that every state in \mintinline{scala}{Playing} status satisfies
     state.status == GameStatus.Playing &&
       0 < state.snake.length &&
       state.snake.length < state.gridWidth * state.gridHeight &&
-      ((state.pendingDirection.isDefined && state.snake.length > 1)
-          ==> (state.direction != state.pendingDirection.get.opposite)) && 
+      validPendingDirection(state) &&
       allWithinBounds(state.snake, state.gridWidth, state.gridHeight) &&
       noSelfIntersection(state.snake) &&
       contiguous(state.snake)
 \end{minted}
-which serves as the central invariant.
-It says that the snake length is strictly positive and less that the total grid size $(W \times
-H)$, the pending direction is valid, all snake positions are within the grid boundaries, the
-snake has no duplicate positions and each segment of the snake is adjacent to the next segment.
+which serves as the central invariant, that states:
+\begin{itemize}
+    \item The snake length is strictly positive and less than the total grid size $W \times H$.
+        Note: $W, H \geqslant 3$.
+    \item The pending direction is never the opposite of current direction unless the snake length
+        is 1.
+    \item All snake positions are within the grid boundaries.
+    \item The snake has no duplicate positions.
+    \item Each segment of the snake is adjacent to the next segment.
+\end{itemize}
 
 Furthermore, we require \mintinline{scala}{processGameTick} to satisfy
-\mintinline{scala}{validTransistion} which describes valid transitions, that is,
+\mintinline{scala}{validTransistion} which describes valid transitions.
+These conditions ensure that the game remain consistent:
 \begin{itemize}
-    \item The snake length never decreases and grows by at most one
+    \item The snake length never decreases and grows by at most one.
     \item Reaching \mintinline{scala}{GameOver} is equivalent to \texttt{nextHead} colliding with
-        the walls or with the snake
-    \item Reaching \mintinline{scala}{GameWon} is equivalent to the snake filling the grid
+        the walls or with the snake.
+    \item Reaching \mintinline{scala}{GameWon} is equivalent to the snake filling the grid.
     \item The tail of the new snake must be a subsequence of the previous snake
         (movement preserves body).
 \end{itemize}
 
-For a \mintinline{scala}{Playing} state, the \mintinline{scala}{generateFood} function can always
-return a valid position to place the food since the length of the snake is strictly less than the
-size of the grid; however, as we will see, the proof of this statement is non-trivial.
+Finally, for a \mintinline{scala}{Playing} state, the \mintinline{scala}{generateFood} function can
+always return a valid position to place the food. This relies on the invariant that the length of
+the snake is strictly less than the size of the grid.
+Proving that an empty spot exists and can be correctly mapped from the random seed is non-trivial.
 
 
 \section{Verification of Game Logic}
 \subsection{Initial Playing State is Valid}
+The verification begins with the transition from \mintinline{scala}{Waiting} to
+\mintinline{scala}{Playing}.
+The function \mintinline{scala}{initializeGame} places a snake of length 1 in the center of the
+grid, heading right with no pending direction.
+The invariant \mintinline{scala}{validPlayingState} is satisfied, since the snake consists of a
+single position, self-intersection is impossible, and the contiguity property holds trivially for
+the base case of a single element list. The bounds check is satisfied by the construction of the
+initial position at $(W/2, H/2)$.
 
 \subsection{Preservation of Invariants}
+In order to prove that \mintinline{scala}{validPlayingState} is an inductive invariant we need to
+show that  \mintinline{scala}{processGameTick} preserves the invariant when the game does not end.
+
+To verify this, we implemented lemmas in \texttt{ListUtilsProperties} regarding the
+\mintinline{scala}{withoutLast} operation used for the snake movement.
+We proved inductively that if a list \texttt{s} is contiguous, then
+\mintinline{scala}{withoutLast(s)} is also contiguous. The proof relies on list induction:
+for the recursive step \mintinline{scala}{Cons(h1, t @ Cons(h2, _))}, the adjacency of \texttt{h1}
+and \texttt{h2} is preserved regardless of the regardless of the removal of the last element of
+\texttt{t}.
+
+Similarly, we proved that removing the last element preserves the
+\mintinline{scala}{noSelfIntersection} and \mintinline{scala}{allWithinBounds}
+properties. Specifically, \mintinline{scala}{withoutLastNoSelfIntersection} leverages the fact that
+\mintinline{scala}{withoutLast(s)} is a subsequence of \texttt{s}. Since the original snake has no
+duplicates, any subsequence inherently satisfies the non-intersection property.
+
+Stainless successfully verifies that adding a valid \texttt{newHead} (checked against
+collision) to this valid tail results in a new snake that is contiguous, non-intersecting and within
+boundaries.
+
+Furthermore, we proved that the length of the snake grows by at most 1, therefore, the length bounds
+are preserved (if we stay in the \mintinline{scala}{Playing} status).
+
+As for \mintinline{scala}{validPendingDirection}, the \mintinline{scala}{queueDirectionChange}
+function ensures that the predicate is verified.
+
 
 \subsection{Transition Safety}
+Beyond the structural invariants of the snake, we verify the transition logic itself via
+\mintinline{scala}{validTransistion}.
+A critical safety property is that the snake body does not teleport or change shape arbitrarily.
+We formalize this by requiring \mintinline{scala}{ListSpecs.subseq(next.snake.tail, curr.snake)}.
+This ensures that the body of the snake in the next state is a subsequence of the snake in the
+previous state.
+This required 3 simple lemmas: \mintinline{scala}{subseqOfSelf} which proves that
+\mintinline{scala}{s: List[T]} is a subsequence of itself, used when the snake does not change;
+\mintinline{scala}{subseqTail} which is provided by \mintinline{scala}{ListSpecs}, used when the
+snake eats the food; and \mintinline{scala}{withoutLastSubseq}, used when the snake does not eat the
+food.
+
+Furthermore, Stainless successfully verifies that the snake length is bounded by \newline
+\mintinline{scala}{curr.length <= next.length <= curr.length + 1}, and reaching
+\mintinline{scala}{GameOver} and \mintinline{scala}{GameWon} conditions without any further help.
 
 \subsection{Food Generation Safety}
+The verification of the \mintinline{scala}{generateFood} function ensures that for any valid playing
+state, it is always possible to find a grid position that is not occupied by the snake.
+The verification relies on proving that the set difference between all grid positions and the snake
+body is non-empty, and the generated position must be within the grid boundaries and not collide
+with the snake.
 
+We first established that the grid construction, which maps a range of integers to positions, is
+injective and produces no duplicates. This is proven in \mintinline{scala}{gridInjection},
+showing that the mapping $i \mapsto (i \% w, i / w)$ is an injection from the integer range to
+grid coordinates.
+Consequently, the list returned by \mintinline{scala}{grid(width, height)} contains unique elements,
+since we proved, range of integers have no duplicates in \mintinline{scala}{rangeNoDupliates} and
+mapping a list with no duplicates with the above injective function gives no duplicates in
+\mintinline{scala}{gridInjectionNoDuplicate}, in \texttt{GridProperties}.
+
+To ensure valid selection, we must prove that \mintinline{scala}{grid -- snake} is non-empty.
+The crux of this proof lies in the lemma \mintinline{scala}{noDuplicateFilterLength} in
+\texttt{ListProperties}. This lemma proves that if a list $\ell_{2}$ (the grid) has no duplicates,
+and $\ell_{1}$ (the snake) is a strictly shorter list, then the length of $\ell_{2} - \ell_{1}$ is
+at least $|\ell_{2}| - |\ell_{1}|$. Since the invariant \mintinline{scala}{validPlayingState}
+guarantees that the snake's length is strictly less than the total grid size ($W \times H$), the
+precondition holds, and the set of empty positions is guaranteed to be non-empty.
+
+To prove the \mintinline{scala}{isWithinBounds} condition, we rely on the properties of the full
+grid and subsequence preservation.
+First, we prove, \mintinline{scala}{rangeMappingWithinBound}, that every element in the full grid
+list, generated by \mintinline{scala}{grid(width, height)}, satisfies the
+\mintinline{scala}{isWithinBounds} predicate.
+Next, we determine the list of potential food positions by computing \mintinline{scala}{grid --
+snake}, which we prove is a valid subsequence of \texttt{grid} using the
+\mintinline{scala}{removeSubseq} lemma.
+Finally, we apply the \mintinline{scala}{subseqPreservesProperty} lemma, which asserts that if a
+property holds for all elements of a list, it holds for all elements of its subsequence.
+Consequently, since all positions in \texttt{grid} are within bounds, any position selected from
+\mintinline{scala}{grid -- snake} is guaranteed to be within bounds.
+
+With the boundary condition established, the collision freedom condition
+\mintinline{scala}{!hasCollision(pos)} follows directly. The \texttt{hasCollision} predicate checks
+if a position is out of bounds or contained in the snake. Since we proved the position is within
+bounds, and it is selected from \mintinline{scala}{grid -- snake} (which explicitly excludes snake
+positions), Stainless automatically proves \mintinline{scala}{!hasCollision(pos)} once we
+instantiation the for all with \mintinline{scala}{ListSpecs.applyForAll}.
 
 \section{Results and Metrics}
+Our formal verification of the Snake game was successfully checked by Stainless. On a standard
+modern CPU, the full verification suite completes in approximately 3 seconds without caching. In the
+GitHub CI/CD pipeline, the verification takes approximately 10 seconds.
+{\color{magenta} TODO: more details maybe...}
 
 
 \section{Conclusion}
+In this project, we demonstrated that formal verification methods can be effectively applied to
+state-based games like Snake. By modeling the game as a finite state machine and defining strict
+invariants for the playing state, we proved that the game logic is sound, free of runtime errors,
+and consistent with the rules of the game. We utilized structural induction to prove properties
+concerning list manipulations such as contiguity and subsequence preservation and set theory
+logic to guarantee the safety of food generation. This work highlights that tools like Stainless
+allow for the rigorous verification of non-trivial state spaces, ensuring software correctness
+beyond what is achievable through traditional testing.
+{\color{magenta} TODO: more details maybe...}
 
+
+\section{References and AI usage}
+\begin{itemize}
+    \item Clément
+        \begin{itemize}
+            \item {\color{magenta}None}
+        \end{itemize}
+    \item Mohamed
+        \begin{itemize}
+            \item {\color{magenta}None}
+        \end{itemize}
+    \item Ozair
+        \begin{itemize}
+            \item When migrating the game logic from Scala standard library to Stainless, we had
+                issues with the JSON serializer/deserializer.
+                The library provided predefined functions for standard Scala List and Option but not
+                for the Stainless's.
+                A series of simple prompts with the code, error and explanation of why the issue
+                occurred solved the issue.
+            \item Updating the visuals of the game (which I did not write) when changing the backend
+                to add/remove features was done using simple prompts describing the required
+                additions/removals worked surprisingly well.
+            \item Asking for proofs generally did not work, it usually combined already proven
+                lemmas or gave incomplete proofs that caused Stainless to time-out.
+        \end{itemize}
+\end{itemize}
+
+\printbibliography[heading=none]
 
 \end{document}
 
