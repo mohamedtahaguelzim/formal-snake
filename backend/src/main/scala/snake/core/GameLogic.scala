@@ -81,13 +81,15 @@ object GameLogic:
     * @return an updated `GameState` with `pendingDirection` set if the change is valid, otherwise
     *         the original state.
     */
-  def queueDirectionChange(state: GameState, newDirection: Direction): GameState =
+  def queueDirectionChange(state: GameState, newDirection: Direction): GameState = {
     val canChangeDirection =
       state.snake.length == 1 || state.direction != newDirection.opposite
-    if !canChangeDirection then state
+    if !canChangeDirection then state.copy(pendingDirection = None())
     else state.copy(pendingDirection = Some(newDirection))
+  }.ensuring(validPendingDirection)
 
   def updateDirection(state: GameState): GameState =
+    require(validPendingDirection(state))
     state.pendingDirection match
       case Some(dir) => state.copy(direction = dir, pendingDirection = None())
       case None()    => state
@@ -156,34 +158,14 @@ object GameLogic:
   def transition(
       state: GameState,
       input: GameInput,
-      tickSeed: BigInt = 0,
       foodSeed: BigInt = 0
   ): GameState =
     (state.status, input) match
       case (GameStatus.Waiting, GameInput(_, true, _, _)) =>
         initializeGame(state, foodSeed)
-
       case (GameStatus.Playing, GameInput(Some(dir), _, _, _)) =>
         queueDirectionChange(state, dir)
-
-      case (GameStatus.Playing, GameInput(_, _, true, _)) =>
+      case (_, GameInput(_, _, reset, stop)) if reset || stop =>
         resetGame(state.config)
-
-      case (GameStatus.Playing, GameInput(_, _, _, true)) =>
-        resetGame(state.config)
-
-      case (GameStatus.GameOver, GameInput(_, _, true, _)) =>
-        resetGame(state.config)
-
-      case (GameStatus.GameWon, GameInput(_, _, true, _)) =>
-        resetGame(state.config)
-
-      case (_, GameInput(_, _, _, true)) =>
-        resetGame(state.config)
-
       case _ =>
         state
-
-  def tickGame(state: GameState, foodSeed: BigInt): GameState =
-    if validPlayingState(state) then processGameTick(state, foodSeed)
-    else state

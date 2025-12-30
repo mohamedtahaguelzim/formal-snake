@@ -45,32 +45,29 @@ object GameStateMachine:
           Behaviors.same
     }
 
+  private def processTick(state: GameState, context: ActorContext[Command]): Behavior[Command] =
+    val newState = GameLogic.processGameTick(state, BigInt(scala.util.Random.nextInt()))
+    if newState.status == GameStatus.GameOver || newState.status == GameStatus.GameWon then
+      val finalScore = ((newState.snake.length - 1) * 10).toInt
+      context.log.info(s"Game Over! Final score: ${finalScore}")
+      gameOver(newState)
+    else
+      scheduleNextTick(context, newState)
+      playing(newState)
+
   private def playing(state: GameState): Behavior[Command] =
     Behaviors.receive { (context, message) =>
       message match
         case Tick =>
-          val newState = GameLogic.tickGame(state, BigInt(scala.util.Random.nextInt()))
-          if newState.status == GameStatus.GameOver then
-            val finalScore = ((newState.snake.length - 1) * 10).toInt
-            context.log.info(s"Game Over! Final score: ${finalScore}")
-            gameOver(newState)
-          else
-            scheduleNextTick(context, newState)
-            playing(newState)
-            
+          processTick(state, context)
+
         case ChangeDirection(newDirection) =>
           val input = GameInput(direction = Some(newDirection))
           val updatedState = GameLogic.transition(state, input)
           
           // If turn-based mode (gameSpeed = 0), process tick immediately on input
           if state.config.gameSpeed == 0 && updatedState.pendingDirection.isDefined then
-            val newState = GameLogic.tickGame(updatedState, BigInt(scala.util.Random.nextInt()))
-            if newState.status == GameStatus.GameOver then
-              val finalScore = ((newState.snake.length - 1) * 10).toInt
-              context.log.info(s"Game Over! Final score: ${finalScore}")
-              gameOver(newState)
-            else
-              playing(newState)
+            processTick(updatedState, context)
           else
             playing(updatedState)
           

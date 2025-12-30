@@ -17,11 +17,14 @@ object Properties:
   def validPlayingState(state: GameState): Boolean =
     state.status == GameStatus.Playing &&
       0 < state.snake.length && state.snake.length < state.gridWidth * state.gridHeight &&
-      ((state.pendingDirection.isDefined && state.snake.length > 1)
-          ==> (state.direction != state.pendingDirection.get.opposite)) &&
+      validPendingDirection(state) &&
       allWithinBounds(state.snake, state.gridWidth, state.gridHeight) &&
       noSelfIntersection(state.snake) &&
       contiguous(state.snake)
+
+  def validPendingDirection(state: GameState): Boolean =
+    ((state.pendingDirection.isDefined && state.snake.length > 1)
+        ==> (state.direction != state.pendingDirection.get.opposite))
 
   def allWithinBounds(
       snake: List[Position],
