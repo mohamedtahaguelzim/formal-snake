@@ -21,13 +21,16 @@
 
 
 \abstract{
-    The Snake game, while considered trivial software, present complex environment and state spaces
-    which makes it an excellent candidate for formal verification case study.
-    In this project, we formalize the Snake game as a state machine and verify the correctness of
+    The Snake game, while considered trivial software, presents a complex environment and large state spaces
+    which makes it an excellent candidate for a formal verification case study.
+    In this project, we model the game as a state machine and verify the correctness of
     its game logic using Stainless, a verification framework for Scala.
     We define a set of invariants describing a valid playing game state and prove that the game's
     transition function preserves these invariants along with correct transitions to terminal states
     (Game Over or Game Won).
+
+    Our results demonstrate that modern SMT-based verification tools can effectively guarantee the
+    absence of illegal states in dynamic game environments.
 
     We used the paper \cite{games-using-fm}, which formalizes simple games such as Pac-Man and Chess
     in ProB, as inspiration for our formalization.
@@ -35,23 +38,32 @@
 
 
 \section{Introduction}
-Formal verification is often associated with safety-critical systems; however, applying these
-methods to game development offers a unique pedagogical opportunity to study state-based reasoning
+Formal verification is traditionally associated with safety-critical systems; however, applying these
+methods to game development offers a unique opportunity to study state-based reasoning
 and invariant preservation in a system with immediate visual feedback and intuitive rules. 
 
 The Snake game involves a player-controlled snake moving on a grid, growing as it consumes food, and
-dying if it collides with walls or itself. While traditionally a real-time game, our implementation
-focuses on a turn-based version, meaning the game state updates only when the player provides input
-(although the game is playable in real-time too).
+dying if it collides with the walls or itself. While traditionally a real-time game, our
+implementation focuses on a turn-based version, meaning the game state updates only when the player
+provides input (although the game is playable in real-time too).
 Despite its apparent simplicity, the state space is vast, making exhaustive testing impossible.
 
 In this project, our aim is to verify that our implementation of Snake never enters an undefined or
 illegal state during execution. We model the game in Scala using immutable data structures and use
 the Stainless framework to prove inductive invariants (safety properties).
 
+Our contributions are as follows:
+\begin{itemize}
+    \item We formalize Snake as a finite state machine in Scala, separating control flow from the
+        game logic.
+    \item We define inductive invariants, encompassing geometric bounds and topological consistency.
+    \item We provide machine-checked proofs that the game transition function preserves these
+        invariants and that the food generation algorithm correct.
+\end{itemize}
+
 
 \section{Model and Game Logic}
-The game is implemented as a finite state machine available on 
+The game is implemented as a finite state machine, the implementation is available on 
 \href{https://github.com/mohamedtahaguelzim/formal-snake}{Github}, the state is captured by
 \begin{minted}{scala}
     case class GameState(
@@ -64,16 +76,20 @@ The game is implemented as a finite state machine available on
         pendingDirection: Option[Direction]
     )
 \end{minted}
-where \texttt{status} tracks the high-level state described in Figure~\ref{fig:status}.
+where the \texttt{status} field determines the high-level mode of the FSM described in
+Figure~\ref{fig:status}.
+The game state is represented using immutable data structures, which simplifies formal reasoning
+about state transitions by making each transition explicit and side-effect free.
 The core verification focuses on the \mintinline{scala}{Playing} status, where the logic is
 non-trivial.
 
-The function \mintinline{scala}{def processGameTick(state: GameState, foodSeed: BigInt): GameState}
-advances the game by one tick while in a \mintinline{scala}{Playing} status.
+The core logic resides in the function \mintinline{scala}{processGameTick} which advances the game
+state by one tick while in a \mintinline{scala}{Playing} status.
 It computes the next head position, checks for collisions, moves the snake, handles wins, and may
 generate new food. The snake movement is handled as follows: if food was eaten, then the new snake is
-\mintinline{scala}{nextHead :: oldSnake}; otherwise it is \mintinline{scala}{nextHead ::
-withoutLast(oldSnake)} where \texttt{withoutLast} removes the last element of the list.
+\mintinline{scala}{nextHead :: oldSnake}; otherwise it is \newline
+\mintinline{scala}{nextHead :: withoutLast(oldSnake)} where \texttt{withoutLast} removes the last
+element of the list.
 
 The function \mintinline{scala}{def generateFood(state: GameState, seed: BigInt): Position} outputs
 a grid position where the food will be placed such that it is not occupied by the snake. It uses
@@ -138,15 +154,15 @@ which serves as the central invariant, that states:
 \end{itemize}
 
 Furthermore, we require \mintinline{scala}{processGameTick} to satisfy
-\mintinline{scala}{validTransistion} which describes valid transitions.
-These conditions ensure that the game remain consistent:
+\mintinline{scala}{validTransition} which describes valid state transitions.
+These conditions ensure that the game remains consistent:
 \begin{itemize}
     \item The snake length never decreases and grows by at most one.
+    \item The tail of the new snake must be a subsequence of the previous snake
+        (movement preserves body).
     \item Reaching \mintinline{scala}{GameOver} is equivalent to \texttt{nextHead} colliding with
         the walls or with the snake.
     \item Reaching \mintinline{scala}{GameWon} is equivalent to the snake filling the grid.
-    \item The tail of the new snake must be a subsequence of the previous snake
-        (movement preserves body).
 \end{itemize}
 
 Finally, for a \mintinline{scala}{Playing} state, the \mintinline{scala}{generateFood} function can
@@ -168,7 +184,8 @@ initial position at $(W/2, H/2)$.
 
 \subsection{Preservation of Invariants}
 In order to prove that \mintinline{scala}{validPlayingState} is an inductive invariant we need to
-show that  \mintinline{scala}{processGameTick} preserves the invariant when the game does not end.
+show that \newline
+\mintinline{scala}{processGameTick} preserves the invariant when the game does not end.
 
 To verify this, we implemented lemmas in \texttt{ListUtilsProperties} regarding the
 \mintinline{scala}{withoutLast} operation used for the snake movement.
@@ -197,7 +214,7 @@ function ensures that the predicate is verified.
 
 \subsection{Transition Safety}
 Beyond the structural invariants of the snake, we verify the transition logic itself via
-\mintinline{scala}{validTransistion}.
+\mintinline{scala}{validTransition}.
 A critical safety property is that the snake body does not teleport or change shape arbitrarily.
 We formalize this by requiring \mintinline{scala}{ListSpecs.subseq(next.snake.tail, curr.snake)}.
 This ensures that the body of the snake in the next state is a subsequence of the snake in the
@@ -256,46 +273,94 @@ bounds, and it is selected from \mintinline{scala}{grid -- snake} (which explici
 positions), Stainless automatically proves \mintinline{scala}{!hasCollision(pos)} once we
 instantiation the for all with \mintinline{scala}{ListSpecs.applyForAll}.
 
+
 \section{Results and Metrics}
-Our formal verification of the Snake game was successfully checked by Stainless. On a standard
-modern CPU, the full verification suite completes in approximately 3 seconds without caching. In the
-GitHub CI/CD pipeline, the verification takes approximately 10 seconds.
-{\color{magenta} TODO: more details maybe...}
+The formalization was successfully verified by Stainless. On a standard modern CPU, the full
+verification suite completes in approximately 3 seconds without caching. In the GitHub CI/CD
+pipeline, the verification takes approximately 10 seconds.
+
+The verified code-base consists of approximately 400 lines of Scala code, split roughly in one third
+for the game implementation and two thirds for the proof infrastructure.
+A significant portion of the effort was dedicated to auxiliary lemmas.
+This demonstrates a typical ratio in formal verification where the time spent on proofs and the
+proof code size exceeds the implementation's.
 
 
 \section{Conclusion}
 In this project, we demonstrated that formal verification methods can be effectively applied to
-state-based games like Snake. By modeling the game as a finite state machine and defining strict
+state-based games like Snake. By modeling the game as a finite state machine and defining
 invariants for the playing state, we proved that the game logic is sound, free of runtime errors,
 and consistent with the rules of the game. We utilized structural induction to prove properties
-concerning list manipulations such as contiguity and subsequence preservation and set theory
+concerning list manipulations such as contiguity, subsequence preservation and set theory
 logic to guarantee the safety of food generation. This work highlights that tools like Stainless
 allow for the rigorous verification of non-trivial state spaces, ensuring software correctness
 beyond what is achievable through traditional testing.
-{\color{magenta} TODO: more details maybe...}
+This project also highlights the limitations of automated verification tools, as several non-trivial
+properties, particularly those involving list manipulation and grid reasoning, required carefully
+designed auxiliary lemmas.
+
+
+\section{Further Work}
+While this project establishes the correctness of the core Snake game logic, several meaningful
+extensions could be explored in future work.
+
+\paragraph{Stronger Properties and Liveness}
+Our verification focuses primarily on safety properties, ensuring that the game never reaches an
+invalid state. A natural extension would be to reason about liveness properties. For example,
+one could prove that from any valid \mintinline{scala}{Playing} state, the game eventually reaches a
+terminal state (\mintinline{scala}{GameOver} or \mintinline{scala}{GameWon}) under reasonable
+assumptions on player input. Another direction would be to formally characterize determinism, i.e.,
+prove that for a given state and input, the transition function always produces a unique next state.
+
+\paragraph{Formally Verified Solver} A natural extension is the implementation of a formally
+verified solver. Specifically, when one of the dimensions is even, there always exists a 
+\href{http://www.datagenetics.com/blog/april42013/}{Hamiltonian cycle} which the snake can follow to
+guarantee a win.
+
+\paragraph{Extended Game Rules}
+The current model assumes a single food item, empty boards, and hard boundaries. The framework could
+be extended to support richer game mechanics, such as multiple simultaneous food items, static
+obstacles, or wrap-around borders. Each of these features would require new invariants and
+additional reasoning about collision detection and food placement, providing a more challenging
+verification task while preserving the same state-machine structure.
+
+\paragraph{Scalability and Automation}
+Although verification time remains reasonable for this project, the number of auxiliary lemmas
+required for list manipulation and grid reasoning highlights the limits of automation. Future work
+could investigate alternative encodings of the snake body or grid, or compare Stainless with other
+verification tools to evaluate proof effort, expressiveness, and scalability.
+
+\paragraph{Executable Refinement}
+Finally, one could establish a refinement relation between the verified model and a real-time or
+graphical implementation of the game. Proving that the executable version refines the verified
+state-machine specification would strengthen the connection between formal guarantees and deployed
+software.
 
 
 \section{References and AI usage}
 \begin{itemize}
     \item Clément
         \begin{itemize}
-            \item {\color{magenta}None}
+            \item Attempts were made to use ChatGPT to generate direct proofs; however, this was not successful. ChatGPT was more useful for interpreting Stainless verification output when proofs were invalid, but it was unable to infer concrete solutions to the reported issues.
         \end{itemize}
-    \item Mohamed
-        \begin{itemize}
-            \item {\color{magenta}None}
-        \end{itemize}
+    \item Mohamed Taha
+    \begin{itemize}
+        \item LLMs were helpful for frontend development. They were used to implement the dark theme and the debug mode, where snake cells are numbered.
+        \item The initial WebSocket implementation (both frontend and backend) was buggy, but LLMs helped fix the issues after a few iterations.
+        \item LLMs were not very useful for Stainless: they frequently hallucinated code or attempted to use Scala instead of Stainless.
+        \item The presentation was partially created using AI (Copilot), which efficiently extracted relevant code blocks and integrated them into the \LaTeX{} slides. It also gave good suggestions on how our presentation related to the codebase, since it had access to it.
+    \end{itemize}
     \item Ozair
         \begin{itemize}
             \item When migrating the game logic from Scala standard library to Stainless, we had
                 issues with the JSON serializer/deserializer.
                 The library provided predefined functions for standard Scala List and Option but not
                 for the Stainless's.
-                A series of simple prompts with the code, error and explanation of why the issue
+                A series of simple prompts with the code, error, and explanation of why the issue
                 occurred solved the issue.
             \item Updating the visuals of the game (which I did not write) when changing the backend
                 to add/remove features was done using simple prompts describing the required
-                additions/removals worked surprisingly well.
+                additions/removals which worked surprisingly well.
             \item Asking for proofs generally did not work, it usually combined already proven
                 lemmas or gave incomplete proofs that caused Stainless to time-out.
         \end{itemize}
@@ -304,4 +369,5 @@ beyond what is achievable through traditional testing.
 \printbibliography[heading=none]
 
 \end{document}
+
 
